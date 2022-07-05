@@ -6,6 +6,7 @@ use sender::Manager;
 // use std::alloc::{alloc, dealloc, Layout};
 use std::net::SocketAddr;
 use std::sync::{Mutex, MutexGuard};
+use std::thread::sleep;
 use std::time::Duration;
 
 use crate::sender::Key;
@@ -89,9 +90,20 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     });
 
     unsafe {
-        let ptr = instance as *mut Mutex<Manager>;
-        // dealloc(ptr, LAYOUT);
-        drop(Box::from_raw(ptr));
+        let boxed = Box::from_raw(instance as *mut Mutex<Manager>);
+
+        // Wait for the manager to finish
+        loop {
+            sleep(Duration::from_millis(1));
+            if let Ok(m) = boxed.lock() {
+                if !m.is_destroyed() {
+                    continue;
+                }
+            }
+            break;
+        }
+
+        drop(boxed);
     }
 }
 

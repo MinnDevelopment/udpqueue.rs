@@ -15,6 +15,7 @@ impl From<i64> for Key {
     }
 }
 
+// TODO: Consider using constant ring buffer
 struct Queue {
     pub packets: VecDeque<Vec<u8>>, // the packets in the queue
     pub due_time: SystemTime,       // when the next packet needs to be sent
@@ -38,12 +39,19 @@ impl Queue {
     }
 }
 
+#[derive(PartialEq, PartialOrd, Ord, Eq)]
+pub enum Status {
+    Running,
+    Shutdown,
+    Destroyed
+}
+
 pub struct Manager {
     queues: VecDeque<Key>,      // Orders the queues based on due_time
     index: HashMap<Key, Queue>, // Easy access to the map for a specific send handler
-    shutdown: bool,
     capacity: usize,
     interval: Duration,
+    status: Status
 }
 
 impl Manager {
@@ -53,7 +61,7 @@ impl Manager {
             interval,
             queues: VecDeque::with_capacity(100), // 100 connections
             index: HashMap::with_capacity(100),
-            shutdown: false,
+            status: Status::Running
         }
     }
 
@@ -66,7 +74,7 @@ impl Manager {
     }
 
     pub fn enqueue_packet(&mut self, key: Key, address: SocketAddr, data: Vec<u8>) {
-        if self.shutdown {
+        if self.status != Status::Running {
             return;
         }
 
@@ -85,7 +93,11 @@ impl Manager {
     }
 
     pub fn shutdown(&mut self) {
-        self.shutdown = true;
+        self.status = Status::Shutdown;
+    }
+
+    pub fn is_destroyed(&self) -> bool {
+        self.status == Status::Destroyed
     }
 
     pub fn delete_queue(&mut self, key: Key) {
@@ -107,7 +119,8 @@ impl Manager {
         let mut idle = false;
         loop {
             if idle {
-                sleep(Duration::from_millis(10));
+                // 1us time window to allow for new packages to be enqueued
+                sleep(Duration::from_nanos(1000));
             }
 
             let packet;
@@ -124,8 +137,9 @@ impl Manager {
 
                 interval = manager.interval;
 
-                if manager.shutdown {
-                    break;
+                if manager.status != Status::Running {
+                    manager.status = Status::Destroyed;
+                    return;
                 }
 
                 if let Some(q) = manager.next() {
@@ -140,7 +154,6 @@ impl Manager {
                 }
             }
 
-            let now = SystemTime::now();
             if let Some(packet) = packet {
                 sleep_until(due_time);
                 // TODO: Explicit socket handling
@@ -160,6 +173,7 @@ impl Manager {
                 }
             }
 
+            let now = SystemTime::now();
             if let Ok(mut manager) = manager.lock() {
                 if let Some(queue) = manager.index.get_mut(&key) {
                     queue.due_time = now + interval;

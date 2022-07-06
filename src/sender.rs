@@ -137,31 +137,29 @@ impl Manager {
             let interval;
             let explicit_socket;
 
-            {
-                let mut manager = match manager.lock() {
-                    Ok(manager) => manager,
-                    Err(_) => continue,
-                };
+            match manager.lock() {
+                Err(_) => continue,
+                Ok(mut manager) => {
+                    interval = manager.interval;
 
-                interval = manager.interval;
+                    if manager.status != Status::Running {
+                        manager.status = Status::Destroyed;
+                        return;
+                    }
 
-                if manager.status != Status::Running {
-                    manager.status = Status::Destroyed;
-                    return;
+                    if let Some(q) = manager.next() {
+                        key = q.key;
+                        due_time = q.due_time;
+                        address = q.address;
+                        explicit_socket = q.socket.as_ref().and_then(|s| s.try_clone().ok());
+                        packet = q.pop();
+                        idle = packet.is_none();
+                    } else {
+                        idle = true;
+                        continue;
+                    }
                 }
-
-                if let Some(q) = manager.next() {
-                    key = q.key;
-                    due_time = q.due_time;
-                    address = q.address;
-                    explicit_socket = q.socket.as_ref().and_then(|s| s.try_clone().ok());
-                    packet = q.pop();
-                    idle = packet.is_none();
-                } else {
-                    idle = true;
-                    continue;
-                }
-            }
+            };
 
             if let Some(ref packet) = packet {
                 sleep_until(due_time);

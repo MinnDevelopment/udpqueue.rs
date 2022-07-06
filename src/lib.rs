@@ -49,9 +49,9 @@ fn copy_data(
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     Ok(env
         .get_direct_buffer_address(buffer.into())?
-        .into_iter()
+        .iter()
         .take(length as usize)
-        .map(|b| *b)
+        .copied()
         .collect())
 }
 
@@ -121,7 +121,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     remaining as jint
 }
 
-#[allow(unused)]
+#[allow(unused, clippy::too_many_arguments)]
 fn queue_packet(
     env: JNIEnv,
     me: jobject,

@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, VecDeque},
+    mem::ManuallyDrop,
     net::{SocketAddr, UdpSocket},
     sync::Mutex,
     thread::sleep,
@@ -21,7 +22,7 @@ struct Queue {
     pub due_time: SystemTime,       // when the next packet needs to be sent
     pub key: Key, // key links to the send handler (so that each sender has its own queue of packets)
     pub address: SocketAddr, // the remote address to send our packets to
-    pub socket: Option<UdpSocket>, // the socket to send our packets on
+    pub socket: Option<ManuallyDrop<UdpSocket>>, // the socket to send our packets on
 }
 
 impl Queue {
@@ -80,7 +81,7 @@ impl Manager {
         key: Key,
         address: SocketAddr,
         data: Vec<u8>,
-        socket: Option<UdpSocket>,
+        socket: Option<ManuallyDrop<UdpSocket>>,
     ) {
         if self.status != Status::Running {
             return;

@@ -2,6 +2,7 @@ use jni::objects::{JClass, JString};
 use jni::sys::{jboolean, jint, jlong, jobject};
 use jni::JNIEnv;
 use sender::Manager;
+use std::mem::ManuallyDrop;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket};
 use std::sync::{Mutex, MutexGuard};
 use std::thread::sleep;
@@ -130,7 +131,7 @@ fn queue_packet(
     port: jint,
     data_buffer: jobject,
     data_length: jint,
-    socket: Option<UdpSocket>,
+    socket: Option<ManuallyDrop<UdpSocket>>,
 ) -> bool {
     if instance == 0 {
         return false;
@@ -217,8 +218,10 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     me: jobject,
     instance: jlong,
 ) {
-    let socket_v4 = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).expect("Could not bind IPv4 UdpSocket");
-    let socket_v6 = UdpSocket::bind((Ipv6Addr::UNSPECIFIED, 0)).expect("Could not bind IPv6 UdpSocket");
+    let socket_v4 =
+        UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).expect("Could not bind IPv4 UdpSocket");
+    let socket_v6 =
+        UdpSocket::bind((Ipv6Addr::UNSPECIFIED, 0)).expect("Could not bind IPv6 UdpSocket");
 
     if instance != 0 {
         let handle = get_handle(instance);
@@ -236,65 +239,102 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     // todo!();
 }
 
-#[cfg(unix)]
-mod unix_specific {
-    use std::os::unix::io::{FromRawFd, RawFd};
+// Explicit socket handling requires platform-specific conversions between file descriptors / handles to UdpSocket instances.
+// Note: I haven't tested any of this since I have no usable java interface at the moment.
 
-    use super::*;
+#[no_mangle]
+#[allow(non_snake_case, unused)]
+pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_processWithSocket(
+    env: JNIEnv,
+    me: jobject,
+    instance: jlong,
+    socketv4: jlong,
+    socketv6: jlong,
+) {
+    let socket_v6 = unsafe { to_socket(socketv6) };
+    let socket_v4 = unsafe { to_socket(socketv4) };
 
-    #[no_mangle]
-    #[allow(non_snake_case, unused)]
-    pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_processWithSocket(
-        env: JNIEnv,
-        me: jobject,
-        instance: jlong,
-        socketv4: jlong,
-        socketv6: jlong,
-    ) {
-        let socket_v6 = unsafe { UdpSocket::from_raw_fd(socketv6 as RawFd) };
-        let socket_v4 = unsafe { UdpSocket::from_raw_fd(socketv4 as RawFd) };
+    if instance != 0 {
+        let handle = get_handle(instance);
+        Manager::process(handle, &socket_v4, &socket_v6);
+    }
+}
 
-        if instance != 0 {
-            let handle = get_handle(instance);
-            Manager::process(handle, &socket_v4, &socket_v6);
-        }
+#[no_mangle]
+#[allow(non_snake_case, unused)]
+pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_queuePacketWithSocket(
+    env: JNIEnv,
+    me: jobject,
+    instance: jlong,
+    key: jlong,
+    address_string: JString,
+    port: jint,
+    data_buffer: jobject,
+    data_length: jint,
+    socket_handle: jlong,
+) -> jboolean {
+    let socket = unsafe { to_socket(socket_handle) };
+    if let Err(e) = socket.try_clone() {
+        eprintln!(
+            "Cannot use UdpSocket because cloning is not supported. Error: {}",
+            e
+        );
+        return 0;
     }
 
-    #[no_mangle]
-    #[allow(non_snake_case, unused)]
-    pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_queuePacketWithSocket(
-        env: JNIEnv,
-        me: jobject,
-        instance: jlong,
-        key: jlong,
-        address_string: JString,
-        port: jint,
-        data_buffer: jobject,
-        data_length: jint,
-        socket_handle: jlong,
-    ) -> jboolean {
-        let socket = unsafe { UdpSocket::from_raw_fd(socket_handle as RawFd) };
-        if let Err(e) = socket.try_clone() {
-            eprintln!(
-                "Cannot use UdpSocket because cloning is not supported. Error: {}",
-                e
-            );
-            return 0;
-        }
+    match queue_packet(
+        env,
+        me,
+        instance,
+        key,
+        address_string,
+        port,
+        data_buffer,
+        data_length,
+        Some(socket),
+    ) {
+        true => 1,
+        false => 0,
+    }
+}
 
-        match queue_packet(
-            env,
-            me,
-            instance,
-            key,
-            address_string,
-            port,
-            data_buffer,
-            data_length,
-            Some(socket),
-        ) {
-            true => 1,
-            false => 0,
-        }
+// Pick implementation for current platform, or fallback to panic
+
+#[cfg(not(any(unix, windows)))]
+use fallback::to_socket;
+#[cfg(unix)]
+use unix_specific::to_socket;
+#[cfg(windows)]
+use windows_specific::to_socket;
+
+#[cfg(unix)]
+mod unix_specific {
+    use super::*;
+    use std::os::unix::io::{FromRawFd, RawFd};
+
+    #[inline(always)]
+    pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
+        ManuallyDrop::new(UdpSocket::from_raw_fd(handle as RawFd))
+    }
+}
+
+#[cfg(windows)]
+mod windows_specific {
+    use super::*;
+    use std::os::windows::io::{FromRawSocket, RawSocket};
+
+    #[inline(always)]
+    pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
+        ManuallyDrop::new(UdpSocket::from_raw_socket(handle as RawSocket))
+    }
+}
+
+#[cfg(not(any(unix, windows)))]
+mod fallback {
+    use super::*;
+
+    #[inline(always)]
+    pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
+        panic!("Cannot convert UdpSocket handle for this platform");
     }
 }

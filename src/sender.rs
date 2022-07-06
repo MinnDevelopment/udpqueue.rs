@@ -162,14 +162,14 @@ impl Manager {
                 }
             }
 
-            if let Some(packet) = packet {
+            if let Some(ref packet) = packet {
                 sleep_until(due_time);
                 let result = if let Some(socket) = explicit_socket {
-                    socket.send_to(&packet, &address)
+                    socket.send_to(packet, &address)
                 } else if address.is_ipv4() {
-                    socket_v4.send_to(&packet, address)
+                    socket_v4.send_to(packet, address)
                 } else {
-                    socket_v6.send_to(&packet, address)
+                    socket_v6.send_to(packet, address)
                 };
 
                 if let Err(e) = result {
@@ -185,7 +185,10 @@ impl Manager {
             let now = SystemTime::now();
             if let Ok(mut manager) = manager.lock() {
                 if let Some(queue) = manager.index.get_mut(&key) {
-                    queue.due_time = now + interval;
+                    // Let the queue expire if it is currently empty
+                    if packet.is_some() {
+                        queue.due_time = now + interval;
+                    }
                     manager.append(key);
                 }
             }

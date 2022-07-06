@@ -1,4 +1,15 @@
 /target
 .vscode
-java/
 .cargo
+.idea
+
+/java/build
+/java/.gradle
+/java/src/main/resources/natives
+
+*.so
+*.dll
+*.o
+*.rlib
+*.d
+*.dylib

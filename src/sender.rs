@@ -139,7 +139,7 @@ impl Manager {
 
             match manager.lock() {
                 Err(_) => continue,
-                Ok(mut manager) => {
+                Ok(ref mut manager) => {
                     interval = manager.interval;
 
                     if manager.status != Status::Running {
@@ -175,14 +175,14 @@ impl Manager {
                     eprintln!("Error sending packet: {}", e);
                 }
             } else if due_time.elapsed().is_ok() {
-                if let Ok(mut manager) = manager.lock() {
+                if let Ok(ref mut manager) = manager.lock() {
                     manager.index.remove(&key);
                     continue;
                 }
             }
 
             let now = SystemTime::now();
-            if let Ok(mut manager) = manager.lock() {
+            if let Ok(ref mut manager) = manager.lock() {
                 if let Some(queue) = manager.index.get_mut(&key) {
                     // Let the queue expire if it is currently empty
                     if packet.is_some() {

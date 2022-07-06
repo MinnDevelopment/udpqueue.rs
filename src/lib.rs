@@ -35,10 +35,8 @@ fn parse_address(
     string: JString,
     port: jint,
 ) -> Result<SocketAddr, Box<dyn std::error::Error>> {
-    let s = format!("{}:80", env.get_string(string)?.to_str()?);
-    let mut addr: SocketAddr = s.parse()?;
-    addr.set_port(port as u16);
-    Ok(addr)
+    let s = format!("{}:{}", env.get_string(string)?.to_str()?, port);
+    Ok(s.parse()?)
 }
 
 #[inline(always)]

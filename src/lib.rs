@@ -92,12 +92,10 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
         // Wait for the manager to finish
         loop {
             sleep(Duration::from_millis(1));
-            if let Ok(m) = boxed.lock() {
-                if !m.is_destroyed() {
-                    continue;
-                }
-            }
-            break;
+            match boxed.lock() {
+                Ok(m) if !m.is_destroyed() => continue,
+                _ => break,
+            };
         }
 
         drop(boxed);
@@ -174,7 +172,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     data_buffer: jobject,
     data_length: jint,
 ) -> jboolean {
-    match queue_packet(
+    queue_packet(
         env,
         me,
         instance,
@@ -184,10 +182,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
         data_buffer,
         data_length,
         None,
-    ) {
-        true => 1,
-        false => 0,
-    }
+    ) as jboolean
 }
 
 #[no_mangle]
@@ -282,7 +277,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
         return 0;
     }
 
-    match queue_packet(
+    queue_packet(
         env,
         me,
         instance,
@@ -292,10 +287,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
         data_buffer,
         data_length,
         Some(socket),
-    ) {
-        true => 1,
-        false => 0,
-    }
+    ) as jboolean
 }
 
 // Pick implementation for current platform, or fallback to panic

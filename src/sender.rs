@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, VecDeque},
-    net::{Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket},
+    net::{SocketAddr, UdpSocket},
     sync::Mutex,
     thread::sleep,
     time::{Duration, SystemTime},
@@ -21,6 +21,7 @@ struct Queue {
     pub due_time: SystemTime,       // when the next packet needs to be sent
     pub key: Key, // key links to the send handler (so that each sender has its own queue of packets)
     pub address: SocketAddr, // the remote address to send our packets to
+    pub socket: Option<UdpSocket>, // the socket to send our packets on
 }
 
 impl Queue {
@@ -30,6 +31,7 @@ impl Queue {
             due_time: SystemTime::now(),
             key,
             address,
+            socket: None,
         }
     }
 
@@ -43,7 +45,7 @@ impl Queue {
 pub enum Status {
     Running,
     Shutdown,
-    Destroyed
+    Destroyed,
 }
 
 pub struct Manager {
@@ -51,7 +53,7 @@ pub struct Manager {
     index: HashMap<Key, Queue>, // Easy access to the map for a specific send handler
     capacity: usize,
     interval: Duration,
-    status: Status
+    status: Status,
 }
 
 impl Manager {
@@ -61,7 +63,7 @@ impl Manager {
             interval,
             queues: VecDeque::with_capacity(100), // 100 connections
             index: HashMap::with_capacity(100),
-            status: Status::Running
+            status: Status::Running,
         }
     }
 
@@ -73,7 +75,13 @@ impl Manager {
         self.queues.push_back(key);
     }
 
-    pub fn enqueue_packet(&mut self, key: Key, address: SocketAddr, data: Vec<u8>) {
+    pub fn enqueue_packet(
+        &mut self,
+        key: Key,
+        address: SocketAddr,
+        data: Vec<u8>,
+        socket: Option<UdpSocket>,
+    ) {
         if self.status != Status::Running {
             return;
         }
@@ -81,7 +89,8 @@ impl Manager {
         let queue = if let Some(queue) = self.index.get_mut(&key) {
             queue
         } else {
-            let q = Queue::new(address, key);
+            let mut q = Queue::new(address, key);
+            q.socket = socket;
             self.index.insert(key, q);
             self.queues.push_front(key); // queue should be immediately used on next iteration!
             self.index
@@ -112,10 +121,7 @@ impl Manager {
         }
     }
 
-    pub fn process(manager: &Mutex<Manager>) {
-        let socket_v4 = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).unwrap();
-        let socket_v6 = UdpSocket::bind((Ipv6Addr::UNSPECIFIED, 0)).unwrap();
-
+    pub fn process(manager: &Mutex<Manager>, socket_v4: &UdpSocket, socket_v6: &UdpSocket) {
         let mut idle = false;
         loop {
             if idle {
@@ -128,6 +134,7 @@ impl Manager {
             let key;
             let address;
             let interval;
+            let explicit_socket;
 
             {
                 let mut manager = match manager.lock() {
@@ -146,6 +153,7 @@ impl Manager {
                     key = q.key;
                     due_time = q.due_time;
                     address = q.address;
+                    explicit_socket = q.socket.as_ref().and_then(|s| s.try_clone().ok());
                     packet = q.pop();
                     idle = packet.is_none();
                 } else {
@@ -156,8 +164,9 @@ impl Manager {
 
             if let Some(packet) = packet {
                 sleep_until(due_time);
-                // TODO: Explicit socket handling
-                let result = if address.is_ipv4() {
+                let result = if let Some(socket) = explicit_socket {
+                    socket.send_to(&packet, &address)
+                } else if address.is_ipv4() {
                     socket_v4.send_to(&packet, address)
                 } else {
                     socket_v6.send_to(&packet, address)

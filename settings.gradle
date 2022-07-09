@@ -1,0 +1,3 @@
+rootProject.name = 'udpqueue'
+
+include 'api', 'native'

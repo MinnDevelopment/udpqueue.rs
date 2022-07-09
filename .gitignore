@@ -1,11 +1,12 @@
-/target
 .vscode
 .cargo
 .idea
 
-/java/build
-/java/.gradle
-/java/src/main/resources/natives
+target
+build
+.gradle
+
+native/src/main/natives
 
 *.so
 *.dll

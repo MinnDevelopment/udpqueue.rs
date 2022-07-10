@@ -166,6 +166,7 @@ impl Manager {
 
             if let Some(ref packet) = packet {
                 sleep_until(due_time);
+
                 let result = if let Some(socket) = explicit_socket {
                     socket.send_to(packet, address)
                 } else if address.is_ipv4() {
@@ -189,7 +190,14 @@ impl Manager {
                 if let Some(queue) = manager.index.get_mut(&key) {
                     // Let the queue expire if it is currently empty
                     if packet.is_some() {
-                        queue.due_time = now + interval;
+                        if now.duration_since(due_time).unwrap_or(Duration::ZERO) >= 2 * interval {
+                            // If the sending took more than twice the interval, we reschedule the next packet to avoid overlap
+                            // Normally, the next packet would now send immediately after this, which is undesirable.
+                            queue.due_time = now + interval;
+                        } else {
+                            // Otherwise just send the next packet when the interval is over
+                            queue.due_time += interval;
+                        }
                     }
                     manager.append(key);
                 }

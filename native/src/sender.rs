@@ -26,9 +26,9 @@ struct Queue {
 }
 
 impl Queue {
-    pub fn new(address: SocketAddr, key: Key) -> Self {
+    pub fn new(address: SocketAddr, key: Key, capacity: usize) -> Self {
         Self {
-            packets: VecDeque::with_capacity(20), // 400ms buffer
+            packets: VecDeque::with_capacity(capacity),
             due_time: SystemTime::now(),
             key,
             address,
@@ -90,7 +90,7 @@ impl Manager {
         let queue = if let Some(queue) = self.index.get_mut(&key) {
             queue
         } else {
-            let mut q = Queue::new(address, key);
+            let mut q = Queue::new(address, key, self.capacity);
             q.socket = socket;
             self.index.insert(key, q);
             self.queues.push_front(key); // queue should be immediately used on next iteration!
@@ -138,7 +138,10 @@ impl Manager {
             let explicit_socket;
 
             match manager.lock() {
-                Err(_) => continue,
+                Err(p) => {
+                    eprintln!("[udpqueue] Lock poisoned: {}", p);
+                    break;
+                },
                 Ok(ref mut manager) => {
                     interval = manager.interval;
 
@@ -164,7 +167,7 @@ impl Manager {
             if let Some(ref packet) = packet {
                 sleep_until(due_time);
                 let result = if let Some(socket) = explicit_socket {
-                    socket.send_to(packet, &address)
+                    socket.send_to(packet, address)
                 } else if address.is_ipv4() {
                     socket_v4.send_to(packet, address)
                 } else {
@@ -172,7 +175,7 @@ impl Manager {
                 };
 
                 if let Err(e) = result {
-                    eprintln!("Error sending packet: {}", e);
+                    eprintln!("[udpqueue] Error sending packet: {}", e);
                 }
             } else if due_time.elapsed().is_ok() {
                 if let Ok(ref mut manager) = manager.lock() {

@@ -8,5 +8,6 @@
 # Example: ./install.sh x86_64-unknown-linux-gnu
 ####################################################################################
 
-./build.sh $1
-./gradlew publishToMavenLocal -Dtarget=$1
+target=$1
+./build.sh $target
+./gradlew --console plain publishToMavenLocal -Ptarget=$target

@@ -8,9 +8,13 @@
 # Example: ./build.sh x86_64-unknown-linux-gnu
 ####################################################################################
 
+target=$1
+
+echo "Building for target: $target"
+
 pushd native
-cargo build -r --target=$1
+cargo build -r --target=$target
 popd
 
 chmod u+x gradlew
-./gradlew build -Dtarget=$1
+./gradlew --console plain build -Ptarget=$target

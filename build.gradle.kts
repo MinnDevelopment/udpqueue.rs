@@ -32,5 +32,5 @@ allprojects {
         else -> throw IllegalArgumentException("Unknown platform: $triplet")
     }
 
-    ext["platform"] = getPlatform(project.properties["target"] as? String ?: "")
+    ext["platform"] = getPlatform(project.property("target") as? String ?: throw AssertionError("Invalid target"))
 }

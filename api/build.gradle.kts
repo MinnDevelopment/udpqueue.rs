@@ -8,7 +8,7 @@ repositories {
 }
 
 dependencies {
-  implementation("com.sedmelluq:lava-common:1.1.0")
+  implementation("com.sedmelluq:lava-common:1.1.2")
   implementation("org.slf4j:slf4j-api:1.7.25")
 }
 

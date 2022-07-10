@@ -22,7 +22,7 @@ tasks.create<Copy>("moveResources") {
   from("target/$target/release/")
 
   include {
-    it.name.endsWith(".so") || it.name.endsWith(".dll") || it.name.endsWith(".dylib")
+    it.name == "release" || it.name.endsWith(".so") || it.name.endsWith(".dll") || it.name.endsWith(".dylib")
   }
 
   into("src/main/resources/natives/$platform")

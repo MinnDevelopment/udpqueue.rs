@@ -44,13 +44,12 @@ fn copy_data(
     env: &JNIEnv,
     buffer: jobject,
     length: jint,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    Ok(env
-        .get_direct_buffer_address(buffer.into())?
-        .iter()
-        .take(length as usize)
-        .copied()
-        .collect())
+) -> Result<Vec<u8>, jni::errors::Error> {
+    let length = length as usize;
+    let mut buf = vec![0; length];
+    let slice = env.get_direct_buffer_address(buffer.into())?;
+    buf.copy_from_slice(&slice[..length]);
+    Ok(buf)
 }
 
 #[no_mangle]

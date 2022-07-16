@@ -3,6 +3,11 @@ name: publish-natives
 on:
   push:
     branches: [ "master" ]
+    paths:
+      - '.github/workflows/publish.yml' # when new targets are added
+      - 'build.gradle.kts' # when the root build script changes
+      - 'api' # when api source is changed
+      - 'native' # when natives are changed
 
 jobs:
   build:

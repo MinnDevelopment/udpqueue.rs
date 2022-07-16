@@ -48,7 +48,7 @@ subprojects {
     }
 
     group = "club.minnced"
-    version = "0.1.3-rc"
+    version = "0.1.3-rc2"
 
     fun getPlatform(triplet: String) = when {
         triplet.startsWith("x86_64")  && "linux"   in triplet -> "linux-x86-64"

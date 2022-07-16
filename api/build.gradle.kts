@@ -51,8 +51,15 @@ publishing.publications {
     }
 }
 
-if ("signing.keyId" in properties) {
+if (ext.has("signingKeyId")) {
     signing {
         sign(publishing.publications["Release"])
+        if (ext.has("signingKey")) {
+            useInMemoryPgpKeys(
+                ext["signingKeyId"].toString(),
+                ext["signingKey"].toString(),
+                null
+            )
+        }
     }
 }

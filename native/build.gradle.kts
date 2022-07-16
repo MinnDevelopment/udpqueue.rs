@@ -5,11 +5,12 @@ plugins {
 }
 
 dependencies {
-    api(project(":api"))
+    // Explicit dependency to avoid having to republish api each time
+    api("club.minnced:udpqueue-api:0.1.1")
 }
 
 val processResources: Copy by tasks
-val target = project.properties["target"]?.toString() ?: ""
+val target = ext["target"]?.toString() ?: ""
 val platform = ext["platform"] as String
 val artifactName = "udpqueue-native-$platform"
 
@@ -55,8 +56,15 @@ publishing.publications {
     }
 }
 
-if ("signing.keyId" in properties) {
+if (ext.has("signingKeyId")) {
     signing {
         sign(publishing.publications["Release"])
+        if (ext.has("signingKey")) {
+            useInMemoryPgpKeys(
+                ext["signingKeyId"].toString(),
+                ext["signingKey"].toString(),
+                null
+            )
+        }
     }
 }

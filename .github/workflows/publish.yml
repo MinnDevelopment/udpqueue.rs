@@ -1,0 +1,49 @@
+name: publish-natives
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+          - os: macos-latest
+            target: x86_64-apple-darwin
+    name: Build and publish
+    runs-on: ${{ matrix.os }}
+    env:
+      GPG_KEY: ${{ secrets.GPG_KEY }}
+      GPG_KEYID: ${{ secrets.GPG_KEYID }}
+      OSSHR_USER: ${{ secrets.OSSHR_USER }}
+      OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+      STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af #@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: ${{ matrix.target }}
+
+      - name: Compile natives
+        working-directory: native
+        run: cargo build -r --target=${{ matrix.target }}
+
+      - name: Publish
+        run: |
+          chmod u+x gradlew
+          ./gradlew native:publishToSonatype closeAndReleaseStagingRepository -Dtarget="${{ matrix.target }}"

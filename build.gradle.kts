@@ -7,14 +7,16 @@ plugins {
     id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
-if (listOf("ossrhUser", "ossrhPassword", "stagingProfileId").all(project.properties::containsKey)) {
+fun getOption(name: String) = System.getenv(name) ?: project.findProperty(name)?.toString()
+
+if (listOf("OSSRH_USER", "OSSRH_PASSWORD", "STAGING_PROFILE_ID").all { getOption(it) != null }) {
     apply(plugin = "io.github.gradle-nexus.publish-plugin")
 
     nexusPublishing {
         repositories.sonatype {
-            username.set(project.property("ossrhUser").toString())
-            password.set(project.property("ossrhPassword").toString())
-            stagingProfileId.set(project.property("stagingProfileId").toString())
+            username.set(getOption("OSSRH_USER"))
+            password.set(getOption("OSSRH_PASSWORD"))
+            stagingProfileId.set(getOption("STAGING_PROFILE_ID"))
         }
 
         // Sonatype is very slow :)
@@ -26,7 +28,6 @@ if (listOf("ossrhUser", "ossrhPassword", "stagingProfileId").all(project.propert
             delayBetween.set(Duration.ofSeconds(5))
         }
     }
-
 }
 
 subprojects {
@@ -43,21 +44,21 @@ subprojects {
     }
 
     group = "club.minnced"
-    version = "0.1.1"
+    version = "0.1.1-rc"
 
     fun getPlatform(triplet: String) = when {
         triplet.startsWith("x86_64")  && "linux"   in triplet -> "linux-x86-64"
-        triplet.startsWith("x86")     && "linux"   in triplet -> "linux-x86"
+        triplet.startsWith("i686")    && "linux"   in triplet -> "linux-x86"
         triplet.startsWith("aarch64") && "linux"   in triplet -> "linux-aarch64"
         triplet.startsWith("arm")     && "linux"   in triplet -> "linux-arm"
 
         triplet.startsWith("x86_64")  && "windows" in triplet -> "win-x86-64"
-        triplet.startsWith("x86")     && "windows" in triplet -> "win-x86"
+        triplet.startsWith("i686")    && "windows" in triplet -> "win-x86"
         triplet.startsWith("aarch64") && "windows" in triplet -> "win-aarch64"
         triplet.startsWith("arm")     && "windows" in triplet -> "win-arm"
 
         triplet.startsWith("x86_64")  && "darwin"  in triplet -> "darwin"
-        triplet.startsWith("x86")     && "darwin"  in triplet -> "darwin"
+        triplet.startsWith("i686")    && "darwin"  in triplet -> "darwin"
         triplet.startsWith("aarch64") && "darwin"  in triplet -> "darwin"
         triplet.startsWith("arm")     && "darwin"  in triplet -> "darwin"
 
@@ -65,8 +66,10 @@ subprojects {
     }
 
     // Testing: "x86_64-unknown-linux-gnu"
-    ext["target"] = project.property("target") as? String ?: throw AssertionError("Invalid target")
+    ext["target"] = "x86_64-unknown-linux-gnu" // project.property("target") as? String ?: throw AssertionError("Invalid target")
     ext["platform"] = getPlatform(ext["target"].toString())
+    ext["signingKey"] = getOption("GPG_KEY")
+    ext["signingKeyId"] = getOption("GPG_KEYID")
 
     val generatePom: MavenPom.() -> Unit = {
         packaging = "jar"

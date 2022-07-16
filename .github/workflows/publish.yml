@@ -51,9 +51,4 @@ jobs:
           ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.GPG_KEYID }}
         run: |
           chmod u+x gradlew
-          ./gradlew \
-            --console plain \
-            --stacktrace \
-            -Ptarget="${{ matrix.target }}" \
-            native:publishToSonatype \
-            closeAndReleaseStagingRepository
+          ./gradlew --console plain --stacktrace -Ptarget="${{ matrix.target }}" native:publishToSonatype closeAndReleaseStagingRepository

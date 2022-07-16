@@ -48,8 +48,10 @@ subprojects {
     }
 
     group = "club.minnced"
-    version = "0.1.3-rc2"
+    version = "0.1.3"
 
+    // See https://github.com/sedmelluq/lavaplayer/blob/master/common/src/main/java/com/sedmelluq/lava/common/natives/architecture/DefaultArchitectureTypes.java
+    // identifier is the suffix used after the system name
     fun getPlatform(triplet: String) = when {
         triplet.startsWith("x86_64")  && "linux"   in triplet -> "linux-x86-64"
         triplet.startsWith("i686")    && "linux"   in triplet -> "linux-x86"

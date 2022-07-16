@@ -9,7 +9,9 @@ plugins {
 
 fun getOption(name: String) = System.getenv(name) ?: project.findProperty(name)?.toString()
 
-if (listOf("OSSRH_USER", "OSSRH_PASSWORD", "STAGING_PROFILE_ID").all { getOption(it) != null }) {
+val enablePublishing = listOf("OSSRH_USER", "OSSRH_PASSWORD", "STAGING_PROFILE_ID").all { getOption(it) != null }
+
+if (enablePublishing) {
     apply(plugin = "io.github.gradle-nexus.publish-plugin")
 
     nexusPublishing {
@@ -111,7 +113,7 @@ subprojects {
     }
 
     val publishingTasks = tasks.withType<PublishToMavenRepository> {
-        enabled = "ossrhUser" in properties
+        enabled = enablePublishing
         mustRunAfter(rebuild)
         dependsOn(rebuild)
     }

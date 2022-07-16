@@ -25,7 +25,7 @@ jobs:
     env:
       GPG_KEY: ${{ secrets.GPG_KEY }}
       GPG_KEYID: ${{ secrets.GPG_KEYID }}
-      OSSHR_USER: ${{ secrets.OSSHR_USER }}
+      OSSRH_USER: ${{ secrets.OSSRH_USER }}
       OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
       STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
     steps:
@@ -51,4 +51,5 @@ jobs:
       - name: Publish
         run: |
           chmod u+x gradlew
+          ./gradlew rebuild
           ./gradlew native:publishToSonatype closeAndReleaseStagingRepository -Dtarget="${{ matrix.target }}"

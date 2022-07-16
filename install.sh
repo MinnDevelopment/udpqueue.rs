@@ -8,6 +8,12 @@
 # Example: ./install.sh x86_64-unknown-linux-gnu
 ####################################################################################
 
-target=$1
+if [ "$1" ]; then
+  target="$1"
+else
+  echo "No target specified, taking first rustup installed target instead"
+  target="`rustup target list --installed | head -1`"
+fi
+
 ./build.sh $target
 ./gradlew --console plain publishToMavenLocal -Ptarget=$target

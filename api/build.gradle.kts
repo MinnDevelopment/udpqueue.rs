@@ -56,6 +56,6 @@ val signingKey: String? by project
 if (signingKey != null) {
     signing {
         useInMemoryPgpKeys(signingKey, null)
-        sign(publishing.publications["Release"])
+        sign(*publishing.publications.toTypedArray())
     }
 }

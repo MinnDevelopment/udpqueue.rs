@@ -58,9 +58,11 @@ publishing.publications {
 
 val signingKey: String? by project
 
-if (signingKey != null) {
+if (signingKey != null) afterEvaluate {
     signing {
         useInMemoryPgpKeys(signingKey, null)
-        sign(publishing.publications["Release"])
+        sign(*publishing.publications.toTypedArray())
     }
+} else {
+    println("Could not find signingKey")
 }

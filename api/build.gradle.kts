@@ -56,10 +56,10 @@ val keyId = if (ext.has("signingKeyId")) ext["signingKeyId"] as? (() -> String) 
 @Suppress("UNCHECKED_CAST")
 val keyArmor = if (ext.has("signingKey")) ext["signingKey"] as? (() -> String) else null
 
-keyId?.let { id ->
+keyId?.let {
     signing {
         keyArmor?.let { key ->
-            useInMemoryPgpKeys(id(), key(), null)
+            useInMemoryPgpKeys(key(), null)
         }
 
         sign(publishing.publications["Release"])

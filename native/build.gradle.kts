@@ -63,10 +63,8 @@ val keyArmor = if (ext.has("signingKey")) ext["signingKey"] as? (() -> String) e
 
 keyId?.let {
     signing {
-        keyArmor?.let { key ->
-            useInMemoryPgpKeys(key(), null)
-        }
-
+        val signingKey: String? by project
+        useInMemoryPgpKeys(signingKey, null)
         sign(publishing.publications["Release"])
     }
 }

@@ -51,17 +51,11 @@ publishing.publications {
     }
 }
 
-@Suppress("UNCHECKED_CAST")
-val keyId = if (ext.has("signingKeyId")) ext["signingKeyId"] as? (() -> String) else null
-@Suppress("UNCHECKED_CAST")
-val keyArmor = if (ext.has("signingKey")) ext["signingKey"] as? (() -> String) else null
+val signingKey: String? by project
 
-keyId?.let {
+if (signingKey != null) {
     signing {
-        keyArmor?.let { key ->
-            useInMemoryPgpKeys(key(), null)
-        }
-
+        useInMemoryPgpKeys(signingKey, null)
         sign(publishing.publications["Release"])
     }
 }

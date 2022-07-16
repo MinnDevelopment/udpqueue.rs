@@ -9,14 +9,6 @@ plugins {
 
 fun getOption(name: String) = System.getenv(name) ?: project.findProperty(name)?.toString()
 
-class Sensitive(private val value: String): () -> String {
-    override fun toString(): String {
-        return "Sensitive(***)"
-    }
-
-    override fun invoke(): String = value
-}
-
 val enablePublishing = listOf("OSSRH_USER", "OSSRH_PASSWORD", "STAGING_PROFILE_ID").all { getOption(it) != null }
 
 if (enablePublishing) {
@@ -76,10 +68,8 @@ subprojects {
     }
 
     // Testing: "x86_64-unknown-linux-gnu"
-    ext["target"] = "x86_64-unknown-linux-gnu" // project.property("target") as? String ?: throw AssertionError("Invalid target")
+    ext["target"] = project.property("target") as? String ?: throw AssertionError("Invalid target")
     ext["platform"] = getPlatform(ext["target"].toString())
-    ext["signingKey"] = getOption("GPG_KEY")?.let { Sensitive(it) }
-    ext["signingKeyId"] = getOption("GPG_KEYID")?.let { Sensitive(it) }
 
     val generatePom: MavenPom.() -> Unit = {
         packaging = "jar"

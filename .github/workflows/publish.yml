@@ -42,7 +42,7 @@ jobs:
 
       - name: Install linker dependencies
         run: ${{ matrix.deps }}
-        if: ${{ matrix.deps != "" }}
+        if: ${{ matrix.deps != '' }}
 
       - name: Compile natives
         working-directory: native

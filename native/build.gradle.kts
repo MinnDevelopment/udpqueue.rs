@@ -61,13 +61,8 @@ val signingPassword: String? by project
 
 if (signingKey != null) {
     signing {
-        println("Using in memory key to sign. Defined: ${signingKey?.isNotBlank()}")
-        useInMemoryPgpKeys(signingKey, signingPassword)
-
+        useInMemoryPgpKeys(signingKey, signingPassword ?: "")
         val publications = publishing.publications.toTypedArray()
-        println("Generated signing tasks for: ${publications.joinToString(", ") { it.name }}")
-        println("Signatory defined: ${signatory.name}")
-
         sign(*publications)
     }
 } else {

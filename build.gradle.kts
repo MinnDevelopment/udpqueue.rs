@@ -7,18 +7,20 @@ plugins {
     id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
-fun getOption(name: String) = System.getenv(name) ?: project.findProperty(name)?.toString()
+val ossrhUser: String? by project
+val ossrhPassword: String? by project
+val stagingProfile: String? by project
 
-val enablePublishing = listOf("OSSRH_USER", "OSSRH_PASSWORD", "STAGING_PROFILE_ID").all { getOption(it) != null }
+val enablePublishing = ossrhUser != null && ossrhPassword != null && stagingProfile != null
 
 if (enablePublishing) {
     apply(plugin = "io.github.gradle-nexus.publish-plugin")
 
     nexusPublishing {
         repositories.sonatype {
-            username.set(getOption("OSSRH_USER"))
-            password.set(getOption("OSSRH_PASSWORD"))
-            stagingProfileId.set(getOption("STAGING_PROFILE_ID"))
+            username.set(ossrhUser)
+            password.set(ossrhPassword)
+            stagingProfileId.set(stagingProfile)
         }
 
         // Sonatype is very slow :)

@@ -57,11 +57,18 @@ publishing.publications {
 }
 
 val signingKey: String? by project
+val signingPassword: String? by project
 
-if (signingKey != null) afterEvaluate {
+if (signingKey != null) {
     signing {
-        useInMemoryPgpKeys(signingKey, null)
-        sign(*publishing.publications.toTypedArray())
+        println("Using in memory key to sign. Defined: ${signingKey?.isNotBlank()}")
+        useInMemoryPgpKeys(signingKey, signingPassword)
+
+        val publications = publishing.publications.toTypedArray()
+        println("Generated signing tasks for: ${publications.joinToString(", ") { it.name }}")
+        println("Signatory defined: ${signatory.name}")
+
+        sign(*publications)
     }
 } else {
     println("Could not find signingKey")

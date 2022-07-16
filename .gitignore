@@ -14,3 +14,5 @@ native/src/main/natives
 *.rlib
 *.d
 *.dylib
+
+gradle.properties

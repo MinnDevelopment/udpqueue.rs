@@ -1,10 +1,11 @@
 plugins {
-  `java-library`
-  `maven-publish`
+    `java-library`
+    signing
+    `maven-publish`
 }
 
 dependencies {
-  api(project(":api"))
+    api(project(":api"))
 }
 
 val processResources: Copy by tasks
@@ -13,38 +14,49 @@ val platform = ext["platform"] as String
 val artifactName = "udpqueue-native-$platform"
 
 tasks.withType<Jar> {
-  archiveBaseName.set(artifactName)
+    archiveBaseName.set(artifactName)
 }
 
 tasks.create<Copy>("moveResources") {
-  group = "build"
+    group = "build"
 
-  from("target/$target/release/")
+    from("target/$target/release/")
 
-  include {
-    it.name == "release" || it.name.endsWith(".so") || it.name.endsWith(".dll") || it.name.endsWith(".dylib")
-  }
+    include {
+        it.name == "release" || it.name.endsWith(".so") || it.name.endsWith(".dll") || it.name.endsWith(".dylib")
+    }
 
-  into("src/main/resources/natives/$platform")
+    into("src/main/resources/natives/$platform")
 
-  processResources.dependsOn(this)
+    processResources.dependsOn(this)
 }
 
 tasks.create<Delete>("cleanNatives") {
-  group = "build"
-  delete(fileTree("src/main/resources/natives"))
-  tasks["clean"].dependsOn(this)
+    group = "build"
+    delete(fileTree("src/main/resources/natives"))
+    tasks["clean"].dependsOn(this)
 }
 
 processResources.include {
-  it.isDirectory || it.file.parentFile.name == platform
+    it.isDirectory || it.file.parentFile.name == platform
 }
 
 
 publishing.publications {
-  create<MavenPublication>("Maven") {
-    from(components["java"])
+    create<MavenPublication>("Release") {
+        from(components["java"])
 
-    artifactId = artifactName
-  }
+        groupId = group.toString()
+        artifactId = artifactName
+        version = version.toString()
+
+        pom.apply(ext["generatePom"] as MavenPom.() -> Unit)
+        pom.name.set(artifactName)
+    }
+}
+
+if ("signing.keyId" in properties) {
+    signing {
+        sign(publishing.publications["Release"])
+    }
 }

@@ -23,7 +23,7 @@ public class ExecutorTools {
   private static final long WAIT_TIME = 1000L;
 
   /**
-   * A completed Future<Void> instance.
+   * A completed Future instance.
    */
   public static final CompletedVoidFuture COMPLETED_VOID = new CompletedVoidFuture();
 

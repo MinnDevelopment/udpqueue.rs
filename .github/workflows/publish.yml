@@ -13,7 +13,7 @@ jobs:
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-latest
             target: i686-unknown-linux-gnu
-            deps: apt install gcc-multilib
+            deps: sudo apt install gcc-multilib
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: windows-latest

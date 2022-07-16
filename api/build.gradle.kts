@@ -51,15 +51,17 @@ publishing.publications {
     }
 }
 
-if (ext.has("signingKeyId")) {
+@Suppress("UNCHECKED_CAST")
+val keyId = if (ext.has("signingKeyId")) ext["signingKeyId"] as? (() -> String) else null
+@Suppress("UNCHECKED_CAST")
+val keyArmor = if (ext.has("signingKey")) ext["signingKey"] as? (() -> String) else null
+
+keyId?.let { id ->
     signing {
-        sign(publishing.publications["Release"])
-        if (ext.has("signingKey")) {
-            useInMemoryPgpKeys(
-                ext["signingKeyId"].toString(),
-                ext["signingKey"].toString(),
-                null
-            )
+        keyArmor?.let { key ->
+            useInMemoryPgpKeys(id(), key(), null)
         }
+
+        sign(publishing.publications["Release"])
     }
 }

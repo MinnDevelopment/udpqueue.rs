@@ -51,5 +51,4 @@ jobs:
       - name: Publish
         run: |
           chmod u+x gradlew
-          ./gradlew rebuild
           ./gradlew native:publishToSonatype closeAndReleaseStagingRepository -Dtarget="${{ matrix.target }}"

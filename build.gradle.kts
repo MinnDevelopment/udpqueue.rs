@@ -35,8 +35,15 @@ subprojects {
         maven("https://jcenter.bintray.com/")
     }
 
+    apply(plugin="java")
+
+    configure<JavaPluginExtension> {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
     group = "club.minnced"
-    version = "0.1.0"
+    version = "0.1.1"
 
     fun getPlatform(triplet: String) = when {
         triplet.startsWith("x86_64")  && "linux"   in triplet -> "linux-x86-64"
@@ -57,6 +64,7 @@ subprojects {
         else -> throw IllegalArgumentException("Unknown platform: $triplet")
     }
 
+    // Testing: "x86_64-unknown-linux-gnu"
     ext["target"] = project.property("target") as? String ?: throw AssertionError("Invalid target")
     ext["platform"] = getPlatform(ext["target"].toString())
 

@@ -49,8 +49,8 @@ dependencies {
 ```gradle
 dependencies {
     // Fully modular, choose which platforms to use!
-    implementation("club.minnced:udpqueue-native-linux-x86-64:0.1.3") // adds linux 64bit
-    implementation("club.minnced:udpqueue-native-win-x86-64:0.1.3") // adds windows 64bit
+    implementation("club.minnced:udpqueue-native-linux-x86-64:0.1.4") // adds linux 64bit
+    implementation("club.minnced:udpqueue-native-win-x86-64:0.1.4") // adds windows 64bit
 }
 ```
 

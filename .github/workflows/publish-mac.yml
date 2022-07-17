@@ -36,7 +36,7 @@ jobs:
         run: mkdir -p native/target/darwin/release
 
       - name: Combine to universal dylib
-        run: lipo --create --output native/target/darwin/release/libudpqueue.dylib native/target/**/release/*.dylib
+        run: lipo -create -output native/target/darwin/release/libudpqueue.dylib native/target/**/release/*.dylib
 
       - name: Publish
         env:

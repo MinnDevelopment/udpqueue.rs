@@ -63,16 +63,13 @@ subprojects {
         triplet.startsWith("aarch64") && "windows" in triplet -> "win-aarch64"
         triplet.startsWith("arm")     && "windows" in triplet -> "win-arm"
 
-        triplet.startsWith("x86_64")  && "darwin"  in triplet -> "darwin"
-        triplet.startsWith("i686")    && "darwin"  in triplet -> "darwin"
-        triplet.startsWith("aarch64") && "darwin"  in triplet -> "darwin"
-        triplet.startsWith("arm")     && "darwin"  in triplet -> "darwin"
+        "darwin"  in triplet -> "darwin"
 
         else -> throw IllegalArgumentException("Unknown platform: $triplet")
     }
 
     // Testing: "x86_64-unknown-linux-gnu"
-    ext["target"] = project.property("target") as? String ?: throw AssertionError("Invalid target")
+    ext["target"] = findProperty("target") as? String ?: throw AssertionError("Invalid target")
     ext["platform"] = getPlatform(ext["target"].toString())
 
     val generatePom: MavenPom.() -> Unit = {
@@ -114,22 +111,9 @@ subprojects {
         }
     }
 
-    val publishingTasks = tasks.withType<PublishToMavenRepository> {
+    tasks.withType<PublishToMavenRepository> {
         enabled = enablePublishing
         mustRunAfter(rebuild)
         dependsOn(rebuild)
     }
-
-//    tasks.create("release") {
-//        group = "publishing"
-//        dependsOn(publishingTasks)
-//        afterEvaluate {
-//            // Collect all the publishing task which upload the archives to nexus staging
-//            val closeAndReleaseSonatypeStagingRepository: Task by tasks
-//
-//            // Make sure the close and release happens after uploading
-//            dependsOn(closeAndReleaseSonatypeStagingRepository)
-//            closeAndReleaseSonatypeStagingRepository.mustRunAfter(publishingTasks)
-//        }
-//    }
 }

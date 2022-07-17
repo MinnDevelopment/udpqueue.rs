@@ -1,3 +1,6 @@
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
+
 plugins {
     `java-library`
     signing
@@ -13,6 +16,15 @@ val processResources: Copy by tasks
 val target = ext["target"]?.toString() ?: ""
 val platform = ext["platform"] as String
 val artifactName = "udpqueue-native-$platform"
+
+// This checks if the version already exists on maven central, and skips if a successful response is returned.
+val shouldPublish by lazy {
+    val conn = URL("https://repo1.maven.org/maven2/club/minnced/$artifactName/$version/").openConnection() as HttpsURLConnection
+    conn.requestMethod = "GET"
+    conn.connect()
+
+    conn.responseCode > 400
+}
 
 tasks.withType<Jar> {
     archiveBaseName.set(artifactName)
@@ -67,4 +79,10 @@ if (signingKey != null) {
     }
 } else {
     println("Could not find signingKey")
+}
+
+// Only run publishing tasks if the version doesn't already exist
+
+tasks.withType<PublishToMavenRepository> {
+    enabled = enabled && shouldPublish
 }

@@ -126,8 +126,8 @@ impl Manager {
         let mut idle = false;
         loop {
             if idle {
-                // 1us time window to allow for new packages to be enqueued
-                sleep(Duration::from_nanos(1000));
+                // 5ms time window to allow for new packages to be enqueued and have low CPU usage
+                sleep(Duration::from_millis(5));
             }
 
             let packet;

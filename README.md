@@ -1,3 +1,5 @@
+[![publish-natives](https://github.com/MinnDevelopment/udpqueue.rs/actions/workflows/publish.yml/badge.svg)](https://github.com/MinnDevelopment/udpqueue.rs/actions/workflows/publish.yml)
+[![rust-clippy analyze](https://github.com/MinnDevelopment/udpqueue.rs/actions/workflows/rust-clippy.yml/badge.svg)](https://github.com/MinnDevelopment/udpqueue.rs/actions/workflows/rust-clippy.yml)
 
 # udpqueue.rs
 

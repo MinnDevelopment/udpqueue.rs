@@ -61,3 +61,17 @@ dependencies {
 Alternatively, you can also install rustup locally on your target platform and build it yourself.
 
 Use `./install.sh <triplet>` to install the jar for your specific platform in maven local. Example: `./install.sh x86_64-unknown-linux-gnu`
+
+To add all supported platforms, you can use this:
+
+```gradle
+dependencies {
+    implementation("club.minnced:udpqueue-native-linux-x86-64:0.1.4")
+    implementation("club.minnced:udpqueue-native-linux-x86:0.1.4")
+    implementation("club.minnced:udpqueue-native-linux-aarch64:0.1.4")
+    implementation("club.minnced:udpqueue-native-linux-arm:0.1.4")
+    implementation("club.minnced:udpqueue-native-win-x86-64:0.1.4")
+    implementation("club.minnced:udpqueue-native-win-x86:0.1.4")
+    implementation("club.minnced:udpqueue-native-darwin:0.1.4")
+}
+```

@@ -11,18 +11,22 @@ This is a rust implementation of the original JDA-NAS natives. This can be used 
 Supported native platforms:
 
 Linux x86 (intel):
+
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-linux-x86-64?color=blue&label=linux-x86-64&logo=linux&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-linux-x86-64)
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-linux-x86?color=blue&label=linux-x86&logo=linux&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-linux-x86)
 
 Linux ARM (v7 and x64):
+
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-linux-aarch64?color=blue&label=linux-aarch64&logo=linux&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-linux-aarch64)
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-linux-arm?color=blue&label=linux-arm&logo=linux&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-linux-arm)
 
 Windows x86 (intel):
+
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-win-x86-64?color=blue&label=win-x86-64&logo=windows&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-win-x86-64)
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-win-x86?color=blue&label=win-x86&logo=windows&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-win-x86)
 
-MacOS/Darwin x86 (intel)
+MacOS/Darwin x86 (intel):
+
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-darwin?color=blue&label=darwin&logo=apple&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-darwin)
 
 More platforms can be added on request.

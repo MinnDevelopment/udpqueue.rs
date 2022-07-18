@@ -27,7 +27,7 @@ Windows x86 (intel):
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-win-x86-64?color=blue&label=win-x86-64&logo=windows&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-win-x86-64)
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-win-x86?color=blue&label=win-x86&logo=windows&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-win-x86)
 
-MacOS/Darwin x86 (intel):
+MacOS/Darwin univerasal (x86 intel & aarch64 M1):
 
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-darwin?color=blue&label=darwin&logo=apple&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-darwin)
 

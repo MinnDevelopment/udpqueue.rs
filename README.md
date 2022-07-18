@@ -31,7 +31,7 @@ MacOS/Darwin univerasal (x86 intel & aarch64 M1):
 
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-darwin?color=blue&label=darwin&logo=apple&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-darwin)
 
-More platforms can be added on request.
+More platforms can be added on request. Linux shared libraries are compiled against **GLIBC 2.25**.
 
 While this project is published to maven-central, the lavaplayer commons dependency is currently only available through jcenter. So you will have to depend on jcenter for now.
 

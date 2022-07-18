@@ -8,3 +8,8 @@ jni = "0.19"
 
 [lib]
 crate_type = ["cdylib"]
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = "debuginfo"

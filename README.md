@@ -68,12 +68,12 @@ To add all supported platforms, you can use this:
 
 ```gradle
 dependencies {
-    implementation("club.minnced:udpqueue-native-linux-x86-64:0.1.5")
-    implementation("club.minnced:udpqueue-native-linux-x86:0.1.5")
-    implementation("club.minnced:udpqueue-native-linux-aarch64:0.1.5")
-    implementation("club.minnced:udpqueue-native-linux-arm:0.1.5")
-    implementation("club.minnced:udpqueue-native-win-x86-64:0.1.5")
-    implementation("club.minnced:udpqueue-native-win-x86:0.1.5")
-    implementation("club.minnced:udpqueue-native-darwin:0.1.5")
+    implementation("club.minnced:udpqueue-native-linux-x86-64:0.1.6")
+    implementation("club.minnced:udpqueue-native-linux-x86:0.1.6")
+    implementation("club.minnced:udpqueue-native-linux-aarch64:0.1.6")
+    implementation("club.minnced:udpqueue-native-linux-arm:0.1.6")
+    implementation("club.minnced:udpqueue-native-win-x86-64:0.1.6")
+    implementation("club.minnced:udpqueue-native-win-x86:0.1.6")
+    implementation("club.minnced:udpqueue-native-darwin:0.1.6")
 }
 ```

@@ -51,15 +51,8 @@ fn copy_data(env: &JNIEnv, buffer: jobject, length: jint) -> Result<Vec<u8>, jni
 /// Wrapper for System.getProperty(String): String?
 #[inline]
 fn get_property(env: &JNIEnv, name: &str) -> Option<String> {
-    let class = match env.find_class("java/lang/System") {
-        Ok(c) => c,
-        Err(_) => return None,
-    };
-
-    let args = match env.new_string(name) {
-        Ok(string) => JValue::Object(string.into()),
-        Err(_) => return None,
-    };
+    let class = env.find_class("java/lang/System").ok()?;
+    let args = JValue::Object(env.new_string(name).ok()?.into());
 
     match env.call_static_method(
         class,
@@ -67,10 +60,13 @@ fn get_property(env: &JNIEnv, name: &str) -> Option<String> {
         "(Ljava/lang/String;)Ljava/lang/String;",
         &[args],
     ) {
-        Ok(JValue::Object(obj)) => env
-            .get_string(JString::from(obj))
-            .ok()
-            .and_then(|s| s.to_str().map(|s| s.to_string()).ok()),
+        Ok(JValue::Object(obj)) => Some(
+            env.get_string(JString::from(obj))
+                .ok()?
+                .to_str()
+                .ok()?
+                .to_string(),
+        ),
         _ => None,
     }
 }
@@ -79,7 +75,9 @@ fn get_property(env: &JNIEnv, name: &str) -> Option<String> {
 /// Configured using -Dudpqueue.log_errors=<bool>
 #[inline]
 fn is_log_errors(env: &JNIEnv) -> bool {
-    get_property(env, "udpqueue.log_errors").unwrap_or("true".to_string()) == "true"
+    get_property(env, "udpqueue.log_errors")
+        .map(|s| s == "true")
+        .unwrap_or(true)
 }
 
 #[no_mangle]

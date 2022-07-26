@@ -1,4 +1,4 @@
-use jni::objects::{JClass, JString};
+use jni::objects::{JClass, JString, JValue};
 use jni::sys::{jboolean, jint, jlong, jobject};
 use jni::JNIEnv;
 use sender::Manager;
@@ -40,16 +40,44 @@ fn parse_address(
 }
 
 #[inline(always)]
-fn copy_data(
-    env: &JNIEnv,
-    buffer: jobject,
-    length: jint,
-) -> Result<Vec<u8>, jni::errors::Error> {
+fn copy_data(env: &JNIEnv, buffer: jobject, length: jint) -> Result<Vec<u8>, jni::errors::Error> {
     let length = length as usize;
     let mut buf = vec![0; length];
     let slice = env.get_direct_buffer_address(buffer.into())?;
     buf.copy_from_slice(&slice[..length]);
     Ok(buf)
+}
+
+/// Wrapper for System.getProperty(String): String?
+#[inline]
+fn get_property(env: &JNIEnv, name: &str) -> Option<String> {
+    let class = env.find_class("java/lang/System").ok()?;
+    let args = JValue::Object(env.new_string(name).ok()?.into());
+
+    match env.call_static_method(
+        class,
+        "getProperty",
+        "(Ljava/lang/String;)Ljava/lang/String;",
+        &[args],
+    ) {
+        Ok(JValue::Object(obj)) => Some(
+            env.get_string(JString::from(obj))
+                .ok()?
+                .to_str()
+                .ok()?
+                .to_string(),
+        ),
+        _ => None,
+    }
+}
+
+/// Whether to log send errors, default true
+/// Configured using -Dudpqueue.log_errors=<bool>
+#[inline]
+fn is_log_errors(env: &JNIEnv) -> bool {
+    get_property(env, "udpqueue.log_errors")
+        .map(|s| s == "true")
+        .unwrap_or(true)
 }
 
 #[no_mangle]
@@ -215,9 +243,10 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     let socket_v6 =
         UdpSocket::bind((Ipv6Addr::UNSPECIFIED, 0)).expect("Could not bind IPv6 UdpSocket");
 
+    let log_errors = is_log_errors(&env);
     if instance != 0 {
         let handle = get_handle(instance);
-        Manager::process(handle, &socket_v4, &socket_v6);
+        Manager::process(handle, &socket_v4, &socket_v6, log_errors);
     }
 }
 
@@ -246,9 +275,10 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     let socket_v6 = unsafe { to_socket(socketv6) };
     let socket_v4 = unsafe { to_socket(socketv4) };
 
+    let log_errors = is_log_errors(&env);
     if instance != 0 {
         let handle = get_handle(instance);
-        Manager::process(handle, &socket_v4, &socket_v6);
+        Manager::process(handle, &socket_v4, &socket_v6, log_errors);
     }
 }
 

@@ -96,7 +96,7 @@ impl Manager {
             self.queues.push_front(key); // queue should be immediately used on next iteration!
             self.index
                 .get_mut(&key)
-                .expect("Queue is in index after insert call")
+                .expect("Queue must be in index after insert call")
         };
 
         queue.packets.push_back(data);
@@ -122,7 +122,12 @@ impl Manager {
         }
     }
 
-    pub fn process(manager: &Mutex<Manager>, socket_v4: &UdpSocket, socket_v6: &UdpSocket) {
+    pub fn process(
+        manager: &Mutex<Manager>,
+        socket_v4: &UdpSocket,
+        socket_v6: &UdpSocket,
+        log_errors: bool,
+    ) {
         let mut idle = false;
         loop {
             if idle {
@@ -141,7 +146,7 @@ impl Manager {
                 Err(p) => {
                     eprintln!("[udpqueue] Lock poisoned: {}", p);
                     break;
-                },
+                }
                 Ok(ref mut manager) => {
                     interval = manager.interval;
 
@@ -175,8 +180,10 @@ impl Manager {
                     socket_v6.send_to(packet, address)
                 };
 
-                if let Err(e) = result {
-                    eprintln!("[udpqueue] Error sending packet: {}", e);
+                // Disable this using -Dudpqueue.log_errors=false in your java command line
+                match result {
+                    Err(e) if log_errors => eprintln!("[udpqueue] Error sending packet: {}", e),
+                    _ => {}
                 }
             } else if due_time.elapsed().is_ok() {
                 if let Ok(ref mut manager) = manager.lock() {

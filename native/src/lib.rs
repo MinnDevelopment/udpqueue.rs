@@ -4,7 +4,7 @@ use jni::JNIEnv;
 use sender::Manager;
 use std::mem::ManuallyDrop;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::Mutex;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -12,21 +12,11 @@ use crate::sender::Key;
 
 mod sender;
 
-type Handle = &'static Mutex<Manager>;
-type Locked<'a> = MutexGuard<'a, Manager>;
-
-macro_rules! get_locked {
-    ($instance:expr, $code:expr) => {
-        let handle = get_handle($instance);
-        if let Ok(m) = handle.lock() {
-            $code(m)
-        }
-    };
-}
+type Handle = &'static Manager;
 
 #[inline]
 fn get_handle(instance: jlong) -> Handle {
-    unsafe { &*(instance as *mut Mutex<Manager>) }
+    unsafe { &*(instance as *mut Manager) }
 }
 
 #[inline(always)]
@@ -107,23 +97,16 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
         return;
     }
 
-    get_locked!(instance, |mut m: Locked| {
-        m.shutdown();
-    });
-
     unsafe {
-        let boxed = Box::from_raw(instance as *mut Mutex<Manager>);
+        let manager = Box::from_raw(instance as *mut Manager);
+        manager.shutdown();
 
         // Wait for the manager to finish
-        loop {
+        while !manager.is_destroyed() {
             sleep(Duration::from_millis(1));
-            match boxed.lock() {
-                Ok(m) if !m.is_destroyed() => continue,
-                _ => break,
-            };
         }
 
-        drop(boxed);
+        drop(manager);
     }
 }
 
@@ -136,12 +119,9 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     key: jlong,
 ) -> jint {
     let mut remaining = 0;
-    get_locked!(instance, |m: Locked| {
-        let key: Key = key.into();
-        remaining = m.remaining(key);
-    });
-
-    remaining as jint
+    let manager = get_handle(instance);
+    let key: Key = key.into();
+    manager.remaining(key) as jint
 }
 
 #[allow(unused, clippy::too_many_arguments)]
@@ -176,13 +156,10 @@ fn queue_packet(
         }
     };
 
-    let mut result = false;
-    get_locked!(instance, |mut m: Locked| {
-        m.enqueue_packet(key.into(), address, data, socket);
-        result = true;
-    });
+    let manager = get_handle(instance);
+    manager.enqueue_packet(key.into(), address, data, socket);
 
-    result
+    true
 }
 
 #[no_mangle]
@@ -222,13 +199,8 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
         return 0;
     }
 
-    let mut result = 0;
-    get_locked!(instance, |mut m: Locked| {
-        m.delete_queue(key.into());
-        result = 1;
-    });
-
-    result
+    let manager = get_handle(instance);
+    manager.delete_queue(key.into()) as jboolean
 }
 
 #[no_mangle]

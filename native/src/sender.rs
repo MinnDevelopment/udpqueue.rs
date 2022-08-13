@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, VecDeque},
     mem::ManuallyDrop,
     net::{SocketAddr, UdpSocket},
-    sync::Mutex,
+    sync::{Arc, Condvar, Mutex, MutexGuard},
     thread::sleep,
     time::{Duration, SystemTime},
 };
@@ -50,33 +50,66 @@ pub enum Status {
 }
 
 pub struct Manager {
-    queues: VecDeque<Key>,      // Orders the queues based on due_time
-    index: HashMap<Key, Queue>, // Easy access to the map for a specific send handler
-    capacity: usize,
+    state: Mutex<QueueState>,
+    condvar: Arc<Condvar>,
     interval: Duration,
-    status: Status,
 }
 
-impl Manager {
-    pub fn new(capacity: usize, interval: Duration) -> Self {
+struct QueueState {
+    queues: VecDeque<Key>,
+    index: HashMap<Key, Queue>,
+    status: Status,
+    capacity: usize,
+    condvar: Arc<Condvar>,
+}
+
+impl QueueState {
+    fn new(capacity: usize, condvar: Arc<Condvar>) -> Self {
         Self {
-            capacity,
-            interval,
-            queues: VecDeque::with_capacity(100), // 100 connections
+            queues: VecDeque::with_capacity(100),
             index: HashMap::with_capacity(100),
             status: Status::Running,
+            condvar,
+            capacity,
         }
     }
 
+    #[inline(always)]
+    fn shutdown(&mut self) {
+        self.status = Status::Shutdown;
+    }
+
+    #[inline(always)]
+    fn is_destroyed(&self) -> bool {
+        self.status == Status::Destroyed
+    }
+
+    #[inline(always)]
     fn next(&mut self) -> Option<&mut Queue> {
         self.queues.pop_front().and_then(|k| self.index.get_mut(&k))
     }
 
+    #[inline(always)]
     fn append(&mut self, key: Key) {
         self.queues.push_back(key);
     }
 
-    pub fn enqueue_packet(
+    #[inline(always)]
+    fn delete_queue(&mut self, key: Key) -> bool {
+        self.index.remove(&key).is_some()
+    }
+
+    #[inline(always)]
+    fn remaining(&self, key: Key) -> usize {
+        if let Some(queue) = self.index.get(&key) {
+            self.capacity.saturating_sub(queue.packets.len())
+        } else {
+            self.capacity
+        }
+    }
+
+    #[inline(always)]
+    fn enqueue_packet(
         &mut self,
         key: Key,
         address: SocketAddr,
@@ -101,115 +134,135 @@ impl Manager {
 
         queue.packets.push_back(data);
     }
+}
 
-    pub fn shutdown(&mut self) {
-        self.status = Status::Shutdown;
-    }
-
-    pub fn is_destroyed(&self) -> bool {
-        self.status == Status::Destroyed
-    }
-
-    pub fn delete_queue(&mut self, key: Key) {
-        self.index.remove(&key);
-    }
-
-    pub fn remaining(&self, key: Key) -> usize {
-        if let Some(queue) = self.index.get(&key) {
-            self.capacity.saturating_sub(queue.packets.len())
-        } else {
-            self.capacity
+impl Manager {
+    pub fn new(capacity: usize, interval: Duration) -> Self {
+        let condvar = Arc::new(Condvar::new());
+        let state = Mutex::new(QueueState::new(capacity, condvar.clone()));
+        Self {
+            interval,
+            state,
+            condvar,
         }
     }
 
-    pub fn process(
-        manager: &Mutex<Manager>,
-        socket_v4: &UdpSocket,
-        socket_v6: &UdpSocket,
-        log_errors: bool,
-    ) {
-        let mut idle = false;
-        loop {
-            if idle {
-                // 5ms time window to allow for new packages to be enqueued and have low CPU usage
-                sleep(Duration::from_millis(5));
-            }
+    #[inline(always)]
+    fn state(&self) -> MutexGuard<QueueState> {
+        self.state.lock().unwrap()
+    }
 
+    #[inline(always)]
+    pub fn remaining(&self, key: Key) -> usize {
+        self.state().remaining(key)
+    }
+
+    #[inline(always)]
+    pub fn shutdown(&self) {
+        let mut state = self.state();
+        state.shutdown();
+        state.condvar.notify_one();
+    }
+
+    #[inline(always)]
+    pub fn is_destroyed(&self) -> bool {
+        self.state().is_destroyed()
+    }
+
+    #[inline(always)]
+    pub fn delete_queue(&self, key: Key) -> bool {
+        self.state().delete_queue(key)
+    }
+
+    pub fn enqueue_packet(
+        &self,
+        key: Key,
+        address: SocketAddr,
+        data: Vec<u8>,
+        socket: Option<ManuallyDrop<UdpSocket>>,
+    ) -> bool {
+        match self.state.lock() {
+            Ok(mut state) if state.status == Status::Running => {
+                state.enqueue_packet(key, address, data, socket);
+                true
+            }
+            _ => false,
+        }
+    }
+
+    pub fn process(&self, socket_v4: &UdpSocket, socket_v6: &UdpSocket, log_errors: bool) {
+        loop {
             let packet;
             let due_time;
             let key;
             let address;
-            let interval;
             let explicit_socket;
 
-            match manager.lock() {
-                Err(p) => {
-                    eprintln!("[udpqueue] Lock poisoned: {}", p);
-                    break;
-                }
-                Ok(ref mut manager) => {
-                    interval = manager.interval;
+            {
+                let mut state = self.state();
+                if let Some(q) = state.next() {
+                    key = q.key;
+                    due_time = q.due_time;
+                    address = q.address;
+                    explicit_socket = q.socket.as_ref().and_then(|s| s.try_clone().ok());
 
-                    if manager.status != Status::Running {
-                        manager.status = Status::Destroyed;
-                        return;
-                    }
-
-                    if let Some(q) = manager.next() {
-                        key = q.key;
-                        due_time = q.due_time;
-                        address = q.address;
-                        explicit_socket = q.socket.as_ref().and_then(|s| s.try_clone().ok());
-                        packet = q.pop();
-                        idle = packet.is_none();
+                    if let Some(p) = q.pop() {
+                        packet = p;
                     } else {
-                        idle = true;
+                        state.delete_queue(key);
+                        continue;
+                    }
+                } else {
+                    // Wait until either shutdown or a new packet is enqueued
+                    state = self.condvar.wait(state).unwrap();
+                    if state.status != Status::Running {
+                        break;
+                    } else {
                         continue;
                     }
                 }
+            }
+
+            // Sleep without mutex lock
+            sleep_until(due_time);
+
+            let mut state = self.state();
+
+            let result = if let Some(socket) = explicit_socket {
+                socket.send_to(&packet, address)
+            } else if address.is_ipv4() {
+                socket_v4.send_to(&packet, address)
+            } else {
+                socket_v6.send_to(&packet, address)
             };
 
-            if let Some(ref packet) = packet {
-                sleep_until(due_time);
-
-                let result = if let Some(socket) = explicit_socket {
-                    socket.send_to(packet, address)
-                } else if address.is_ipv4() {
-                    socket_v4.send_to(packet, address)
-                } else {
-                    socket_v6.send_to(packet, address)
-                };
-
-                // Disable this using -Dudpqueue.log_errors=false in your java command line
-                match result {
-                    Err(e) if log_errors => eprintln!("[udpqueue] Error sending packet: {}", e),
-                    _ => {}
-                }
-            } else if due_time.elapsed().is_ok() {
-                if let Ok(ref mut manager) = manager.lock() {
-                    manager.index.remove(&key);
-                    continue;
-                }
+            // Disable this using -Dudpqueue.log_errors=false in your java command line
+            match result {
+                Err(e) if log_errors => eprintln!("[udpqueue] Error sending packet: {}", e),
+                _ => {}
             }
 
             let now = SystemTime::now();
-            if let Ok(ref mut manager) = manager.lock() {
-                if let Some(queue) = manager.index.get_mut(&key) {
-                    // Let the queue expire if it is currently empty
-                    if packet.is_some() {
-                        if now.duration_since(due_time).unwrap_or(Duration::ZERO) >= 2 * interval {
-                            // If the sending took more than twice the interval, we reschedule the next packet to avoid overlap
-                            // Normally, the next packet would now send immediately after this, which is undesirable.
-                            queue.due_time = now + interval;
-                        } else {
-                            // Otherwise just send the next packet when the interval is over
-                            queue.due_time += interval;
-                        }
-                    }
-                    manager.append(key);
+            if let Some(queue) = state.index.get_mut(&key) {
+                // Let the queue expire if it is currently empty
+                if now.duration_since(due_time).unwrap_or(Duration::ZERO) >= 2 * self.interval {
+                    // If the sending took more than twice the interval, we reschedule the next packet to avoid overlap
+                    // Normally, the next packet would now send immediately after this, which is undesirable.
+                    queue.due_time = now + self.interval;
+                } else {
+                    // Otherwise just send the next packet when the interval is over
+                    queue.due_time += self.interval;
                 }
+
+                state.append(key);
+            }
+
+            if state.status != Status::Running {
+                break;
             }
         }
+
+        self.state().status = Status::Destroyed;
     }
 }
 

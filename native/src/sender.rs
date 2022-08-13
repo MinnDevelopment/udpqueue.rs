@@ -63,6 +63,14 @@ struct QueueState {
     condvar: Arc<Condvar>,
 }
 
+struct QueueEntry {
+    packet: Vec<u8>,
+    due_time: SystemTime,
+    key: Key,
+    address: SocketAddr,
+    explicit_socket: Option<ManuallyDrop<UdpSocket>>,
+}
+
 impl QueueState {
     fn new(capacity: usize, condvar: Arc<Condvar>) -> Self {
         Self {
@@ -93,6 +101,11 @@ impl QueueState {
     #[inline(always)]
     fn delete_queue(&mut self, key: Key) -> bool {
         self.index.remove(&key).is_some()
+    }
+
+    #[inline(always)]
+    fn is_empty(&self) -> bool {
+        self.index.values().all(|q| q.packets.is_empty())
     }
 
     #[inline(always)]
@@ -187,38 +200,55 @@ impl Manager {
         }
     }
 
-    pub fn process(&self, socket_v4: &UdpSocket, socket_v6: &UdpSocket, log_errors: bool) {
-        loop {
-            let packet;
-            let due_time;
-            let key;
-            let address;
-            let explicit_socket;
+    fn get_next(&self) -> Option<QueueEntry> {
+        let mut state = self.state();
 
-            {
-                let mut state = self.state();
-                if let Some(q) = state.next() {
-                    key = q.key;
-                    due_time = q.due_time;
-                    address = q.address;
-                    explicit_socket = q.socket.as_ref().and_then(|s| s.try_clone().ok());
-
-                    if let Some(p) = q.pop() {
-                        packet = p;
-                    } else {
-                        state.delete_queue(key);
-                        continue;
-                    }
-                } else {
-                    // Wait until either shutdown or a new packet is enqueued
-                    state = self.condvar.wait(state).unwrap();
-                    if state.status != Status::Running {
-                        break;
-                    } else {
-                        continue;
-                    }
-                }
+        while state.status == Status::Running {
+            if state.is_empty() {
+                state = self.condvar.wait(state).unwrap();
             }
+
+            let mut context = None;
+            let entry = state.next().and_then(|q| {
+                context = Some((q.key, q.due_time));
+                q.pop().map(|p| QueueEntry {
+                    packet: p,
+                    due_time: q.due_time,
+                    key: q.key,
+                    address: q.address,
+                    explicit_socket: q
+                        .socket
+                        .as_ref()
+                        .and_then(|s| s.try_clone().ok())
+                        .map(ManuallyDrop::new),
+                })
+            });
+
+            if entry.is_some() {
+                return entry;
+            }
+
+            match context {
+                Some((key, time)) if time.elapsed().is_ok() => {
+                    state.delete_queue(key);
+                }
+                Some((key, _)) => state.append(key),
+                _ => {}
+            }
+        }
+
+        None
+    }
+
+    pub fn process(&self, socket_v4: &UdpSocket, socket_v6: &UdpSocket, log_errors: bool) {
+        while let Some(entry) = self.get_next() {
+            let QueueEntry {
+                packet,
+                due_time,
+                key,
+                address,
+                explicit_socket,
+            } = entry;
 
             // Sleep without mutex lock
             sleep_until(due_time);
@@ -237,11 +267,9 @@ impl Manager {
                 _ => {}
             }
 
-            let now = SystemTime::now();
-
             let mut state = self.state();
             if let Some(queue) = state.index.get_mut(&key) {
-                // Let the queue expire if it is currently empty
+                let now = SystemTime::now();
                 if now.duration_since(due_time).unwrap_or(Duration::ZERO) >= 2 * self.interval {
                     // If the sending took more than twice the interval, we reschedule the next packet to avoid overlap
                     // Normally, the next packet would now send immediately after this, which is undesirable.
@@ -252,10 +280,6 @@ impl Manager {
                 }
 
                 state.append(key);
-            }
-
-            if state.status != Status::Running {
-                break;
             }
         }
 

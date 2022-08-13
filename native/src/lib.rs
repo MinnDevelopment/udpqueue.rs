@@ -4,7 +4,6 @@ use jni::JNIEnv;
 use sender::Manager;
 use std::mem::ManuallyDrop;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket};
-use std::sync::Mutex;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -12,10 +11,8 @@ use crate::sender::Key;
 
 mod sender;
 
-type Handle = &'static Manager;
-
 #[inline]
-fn get_handle(instance: jlong) -> Handle {
+fn get_handle(instance: jlong) -> &'static Manager {
     unsafe { &*(instance as *mut Manager) }
 }
 
@@ -81,7 +78,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     let queue_buffer_capacity = queue_buffer_capacity as usize;
     let interval = Duration::from_nanos(packet_interval as u64);
     unsafe {
-        let b = Box::new(Mutex::new(Manager::new(queue_buffer_capacity, interval)));
+        let b = Box::new(Manager::new(queue_buffer_capacity, interval));
         Box::into_raw(b) as jlong
     }
 }

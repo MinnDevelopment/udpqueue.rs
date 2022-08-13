@@ -77,11 +77,7 @@ impl QueueState {
     #[inline(always)]
     fn shutdown(&mut self) {
         self.status = Status::Shutdown;
-    }
-
-    #[inline(always)]
-    fn is_destroyed(&self) -> bool {
-        self.status == Status::Destroyed
+        self.condvar.notify_all();
     }
 
     #[inline(always)]
@@ -133,6 +129,7 @@ impl QueueState {
         };
 
         queue.packets.push_back(data);
+        self.condvar.notify_all();
     }
 }
 
@@ -144,6 +141,13 @@ impl Manager {
             interval,
             state,
             condvar,
+        }
+    }
+
+    pub fn wait_shutdown(&self) {
+        let mut guard = self.state();
+        while guard.status != Status::Destroyed {
+            guard = self.condvar.wait(guard).unwrap();
         }
     }
 
@@ -159,14 +163,7 @@ impl Manager {
 
     #[inline(always)]
     pub fn shutdown(&self) {
-        let mut state = self.state();
-        state.shutdown();
-        state.condvar.notify_one();
-    }
-
-    #[inline(always)]
-    pub fn is_destroyed(&self) -> bool {
-        self.state().is_destroyed()
+        self.state().shutdown();
     }
 
     #[inline(always)]
@@ -263,6 +260,7 @@ impl Manager {
         }
 
         self.state().status = Status::Destroyed;
+        self.condvar.notify_all();
     }
 }
 

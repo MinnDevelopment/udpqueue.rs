@@ -4,7 +4,6 @@ use jni::JNIEnv;
 use sender::Manager;
 use std::mem::ManuallyDrop;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket};
-use std::thread::sleep;
 use std::time::Duration;
 
 use crate::sender::Key;
@@ -99,9 +98,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
         manager.shutdown();
 
         // Wait for the manager to finish
-        while !manager.is_destroyed() {
-            sleep(Duration::from_millis(1));
-        }
+        manager.wait_shutdown();
 
         drop(manager);
     }

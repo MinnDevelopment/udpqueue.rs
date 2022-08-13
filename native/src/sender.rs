@@ -223,8 +223,6 @@ impl Manager {
             // Sleep without mutex lock
             sleep_until(due_time);
 
-            let mut state = self.state();
-
             let result = if let Some(socket) = explicit_socket {
                 socket.send_to(&packet, address)
             } else if address.is_ipv4() {
@@ -240,6 +238,8 @@ impl Manager {
             }
 
             let now = SystemTime::now();
+
+            let mut state = self.state();
             if let Some(queue) = state.index.get_mut(&key) {
                 // Let the queue expire if it is currently empty
                 if now.duration_since(due_time).unwrap_or(Duration::ZERO) >= 2 * self.interval {

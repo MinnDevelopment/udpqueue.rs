@@ -4,29 +4,13 @@ use jni::JNIEnv;
 use sender::Manager;
 use std::mem::ManuallyDrop;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket};
-use std::sync::{Mutex, MutexGuard};
-use std::thread::sleep;
 use std::time::Duration;
-
-use crate::sender::Key;
 
 mod sender;
 
-type Handle = &'static Mutex<Manager>;
-type Locked<'a> = MutexGuard<'a, Manager>;
-
-macro_rules! get_locked {
-    ($instance:expr, $code:expr) => {
-        let handle = get_handle($instance);
-        if let Ok(m) = handle.lock() {
-            $code(m)
-        }
-    };
-}
-
 #[inline]
-fn get_handle(instance: jlong) -> Handle {
-    unsafe { &*(instance as *mut Mutex<Manager>) }
+fn get_handle(instance: jlong) -> &'static Manager {
+    unsafe { &*(instance as *mut Manager) }
 }
 
 #[inline(always)]
@@ -91,7 +75,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     let queue_buffer_capacity = queue_buffer_capacity as usize;
     let interval = Duration::from_nanos(packet_interval as u64);
     unsafe {
-        let b = Box::new(Mutex::new(Manager::new(queue_buffer_capacity, interval)));
+        let b = Box::new(Manager::new(queue_buffer_capacity, interval));
         Box::into_raw(b) as jlong
     }
 }
@@ -107,23 +91,14 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
         return;
     }
 
-    get_locked!(instance, |mut m: Locked| {
-        m.shutdown();
-    });
-
     unsafe {
-        let boxed = Box::from_raw(instance as *mut Mutex<Manager>);
+        let manager = Box::from_raw(instance as *mut Manager);
+        manager.shutdown();
 
         // Wait for the manager to finish
-        loop {
-            sleep(Duration::from_millis(1));
-            match boxed.lock() {
-                Ok(m) if !m.is_destroyed() => continue,
-                _ => break,
-            };
-        }
+        manager.wait_shutdown();
 
-        drop(boxed);
+        drop(manager);
     }
 }
 
@@ -135,13 +110,11 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     instance: jlong,
     key: jlong,
 ) -> jint {
-    let mut remaining = 0;
-    get_locked!(instance, |m: Locked| {
-        let key: Key = key.into();
-        remaining = m.remaining(key);
-    });
+    if instance == 0 {
+        return 0;
+    }
 
-    remaining as jint
+    get_handle(instance).remaining(key) as jint
 }
 
 #[allow(unused, clippy::too_many_arguments)]
@@ -176,13 +149,7 @@ fn queue_packet(
         }
     };
 
-    let mut result = false;
-    get_locked!(instance, |mut m: Locked| {
-        m.enqueue_packet(key.into(), address, data, socket);
-        result = true;
-    });
-
-    result
+    get_handle(instance).enqueue_packet(key, address, data, socket)
 }
 
 #[no_mangle]
@@ -222,13 +189,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
         return 0;
     }
 
-    let mut result = 0;
-    get_locked!(instance, |mut m: Locked| {
-        m.delete_queue(key.into());
-        result = 1;
-    });
-
-    result
+    get_handle(instance).delete_queue(key) as jboolean
 }
 
 #[no_mangle]
@@ -245,8 +206,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
 
     let log_errors = is_log_errors(&env);
     if instance != 0 {
-        let handle = get_handle(instance);
-        Manager::process(handle, &socket_v4, &socket_v6, log_errors);
+        get_handle(instance).process(&socket_v4, &socket_v6, log_errors);
     }
 }
 
@@ -277,8 +237,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
 
     let log_errors = is_log_errors(&env);
     if instance != 0 {
-        let handle = get_handle(instance);
-        Manager::process(handle, &socket_v4, &socket_v6, log_errors);
+        get_handle(instance).process(&socket_v4, &socket_v6, log_errors);
     }
 }
 
@@ -319,12 +278,16 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
 
 // Pick implementation for current platform, or fallback to panic
 
-#[cfg(not(any(unix, windows)))]
-use fallback::to_socket;
 #[cfg(unix)]
 use unix_specific::to_socket;
 #[cfg(windows)]
 use windows_specific::to_socket;
+
+#[inline(always)]
+#[cfg(not(any(unix, windows)))]
+pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
+    panic!("Cannot convert UdpSocket handle for this platform");
+}
 
 #[cfg(unix)]
 mod unix_specific {
@@ -345,15 +308,5 @@ mod windows_specific {
     #[inline(always)]
     pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
         ManuallyDrop::new(UdpSocket::from_raw_socket(handle as RawSocket))
-    }
-}
-
-#[cfg(not(any(unix, windows)))]
-mod fallback {
-    use super::*;
-
-    #[inline(always)]
-    pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
-        panic!("Cannot convert UdpSocket handle for this platform");
     }
 }

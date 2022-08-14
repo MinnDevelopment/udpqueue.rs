@@ -9,6 +9,10 @@ on:
       - 'api' # when api source is changed
       - 'native' # when natives are changed
 
+concurrency:
+  group: "pub-mac"
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build macOS universal binary

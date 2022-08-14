@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, VecDeque},
     mem::ManuallyDrop,
     net::{SocketAddr, UdpSocket},
-    sync::{Arc, Condvar, Mutex, MutexGuard},
+    sync::{Condvar, Mutex, MutexGuard},
     thread::sleep,
     time::{Duration, SystemTime},
 };
@@ -42,7 +42,7 @@ pub enum Status {
 
 pub struct Manager {
     state: Mutex<QueueState>,
-    condvar: Arc<Condvar>,
+    condvar: Condvar,
     interval: Duration,
 }
 
@@ -51,7 +51,6 @@ struct QueueState {
     index: HashMap<i64, Queue>,
     status: Status,
     capacity: usize,
-    condvar: Arc<Condvar>,
 }
 
 struct QueueEntry {
@@ -63,12 +62,11 @@ struct QueueEntry {
 }
 
 impl QueueState {
-    fn new(capacity: usize, condvar: Arc<Condvar>) -> Self {
+    fn new(capacity: usize) -> Self {
         Self {
             queues: VecDeque::with_capacity(100),
             index: HashMap::with_capacity(100),
             status: Status::Running,
-            condvar,
             capacity,
         }
     }
@@ -76,7 +74,6 @@ impl QueueState {
     #[inline(always)]
     fn shutdown(&mut self) {
         self.status = Status::Shutdown;
-        self.condvar.notify_all();
     }
 
     #[inline(always)]
@@ -129,18 +126,15 @@ impl QueueState {
         };
 
         queue.packets.push_back(data);
-        self.condvar.notify_all();
     }
 }
 
 impl Manager {
     pub fn new(capacity: usize, interval: Duration) -> Self {
-        let condvar = Arc::new(Condvar::new());
-        let state = Mutex::new(QueueState::new(capacity, condvar.clone()));
         Self {
             interval,
-            state,
-            condvar,
+            state: Mutex::new(QueueState::new(capacity)),
+            condvar: Condvar::new(),
         }
     }
 
@@ -164,6 +158,7 @@ impl Manager {
     #[inline(always)]
     pub fn shutdown(&self) {
         self.state().shutdown();
+        self.condvar.notify_all();
     }
 
     #[inline(always)]
@@ -181,6 +176,7 @@ impl Manager {
         match self.state.lock() {
             Ok(mut state) if state.status == Status::Running => {
                 state.enqueue_packet(key, address, data, socket);
+                self.condvar.notify_all();
                 true
             }
             _ => false,
@@ -191,10 +187,6 @@ impl Manager {
         let mut state = self.state();
 
         while state.status == Status::Running {
-            if state.is_empty() {
-                state = self.condvar.wait(state).unwrap();
-            }
-
             let mut context = None;
             let entry = state.next().and_then(|q| {
                 context = Some((q.key, q.due_time));
@@ -221,6 +213,10 @@ impl Manager {
                 }
                 Some((key, _)) => state.append(key),
                 _ => {}
+            }
+
+            if state.is_empty() {
+                state = self.condvar.wait(state).unwrap();
             }
         }
 

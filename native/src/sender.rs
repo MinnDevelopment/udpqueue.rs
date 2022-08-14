@@ -7,26 +7,17 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Key(i64);
-
-impl From<i64> for Key {
-    fn from(other: i64) -> Self {
-        Key(other)
-    }
-}
-
 // TODO: Consider using constant ring buffer
 struct Queue {
     pub packets: VecDeque<Vec<u8>>, // the packets in the queue
     pub due_time: SystemTime,       // when the next packet needs to be sent
-    pub key: Key, // key links to the send handler (so that each sender has its own queue of packets)
+    pub key: i64, // key links to the send handler (so that each sender has its own queue of packets)
     pub address: SocketAddr, // the remote address to send our packets to
     pub socket: Option<ManuallyDrop<UdpSocket>>, // the socket to send our packets on
 }
 
 impl Queue {
-    pub fn new(address: SocketAddr, key: Key, capacity: usize) -> Self {
+    pub fn new(address: SocketAddr, key: i64, capacity: usize) -> Self {
         Self {
             packets: VecDeque::with_capacity(capacity),
             due_time: SystemTime::now(),
@@ -56,8 +47,8 @@ pub struct Manager {
 }
 
 struct QueueState {
-    queues: VecDeque<Key>,
-    index: HashMap<Key, Queue>,
+    queues: VecDeque<i64>,
+    index: HashMap<i64, Queue>,
     status: Status,
     capacity: usize,
     condvar: Arc<Condvar>,
@@ -66,7 +57,7 @@ struct QueueState {
 struct QueueEntry {
     packet: Vec<u8>,
     due_time: SystemTime,
-    key: Key,
+    key: i64,
     address: SocketAddr,
     explicit_socket: Option<ManuallyDrop<UdpSocket>>,
 }
@@ -94,12 +85,12 @@ impl QueueState {
     }
 
     #[inline(always)]
-    fn append(&mut self, key: Key) {
+    fn append(&mut self, key: i64) {
         self.queues.push_back(key);
     }
 
     #[inline(always)]
-    fn delete_queue(&mut self, key: Key) -> bool {
+    fn delete_queue(&mut self, key: i64) -> bool {
         self.index.remove(&key).is_some()
     }
 
@@ -109,7 +100,7 @@ impl QueueState {
     }
 
     #[inline(always)]
-    fn remaining(&self, key: Key) -> usize {
+    fn remaining(&self, key: i64) -> usize {
         if let Some(queue) = self.index.get(&key) {
             self.capacity.saturating_sub(queue.packets.len())
         } else {
@@ -120,15 +111,11 @@ impl QueueState {
     #[inline(always)]
     fn enqueue_packet(
         &mut self,
-        key: Key,
+        key: i64,
         address: SocketAddr,
         data: Vec<u8>,
         socket: Option<ManuallyDrop<UdpSocket>>,
     ) {
-        if self.status != Status::Running {
-            return;
-        }
-
         let queue = if let Some(queue) = self.index.get_mut(&key) {
             queue
         } else {
@@ -170,7 +157,7 @@ impl Manager {
     }
 
     #[inline(always)]
-    pub fn remaining(&self, key: Key) -> usize {
+    pub fn remaining(&self, key: i64) -> usize {
         self.state().remaining(key)
     }
 
@@ -180,13 +167,13 @@ impl Manager {
     }
 
     #[inline(always)]
-    pub fn delete_queue(&self, key: Key) -> bool {
+    pub fn delete_queue(&self, key: i64) -> bool {
         self.state().delete_queue(key)
     }
 
     pub fn enqueue_packet(
         &self,
-        key: Key,
+        key: i64,
         address: SocketAddr,
         data: Vec<u8>,
         socket: Option<ManuallyDrop<UdpSocket>>,

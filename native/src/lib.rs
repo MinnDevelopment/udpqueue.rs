@@ -6,8 +6,6 @@ use std::mem::ManuallyDrop;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket};
 use std::time::Duration;
 
-use crate::sender::Key;
-
 mod sender;
 
 #[inline]
@@ -112,10 +110,11 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     instance: jlong,
     key: jlong,
 ) -> jint {
-    let mut remaining = 0;
-    let manager = get_handle(instance);
-    let key: Key = key.into();
-    manager.remaining(key) as jint
+    if instance == 0 {
+        return 0;
+    }
+
+    get_handle(instance).remaining(key) as jint
 }
 
 #[allow(unused, clippy::too_many_arguments)]
@@ -150,10 +149,7 @@ fn queue_packet(
         }
     };
 
-    let manager = get_handle(instance);
-    manager.enqueue_packet(key.into(), address, data, socket);
-
-    true
+    get_handle(instance).enqueue_packet(key, address, data, socket)
 }
 
 #[no_mangle]
@@ -193,8 +189,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
         return 0;
     }
 
-    let manager = get_handle(instance);
-    manager.delete_queue(key.into()) as jboolean
+    get_handle(instance).delete_queue(key) as jboolean
 }
 
 #[no_mangle]
@@ -211,8 +206,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
 
     let log_errors = is_log_errors(&env);
     if instance != 0 {
-        let handle = get_handle(instance);
-        Manager::process(handle, &socket_v4, &socket_v6, log_errors);
+        get_handle(instance).process(&socket_v4, &socket_v6, log_errors);
     }
 }
 
@@ -243,8 +237,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
 
     let log_errors = is_log_errors(&env);
     if instance != 0 {
-        let handle = get_handle(instance);
-        Manager::process(handle, &socket_v4, &socket_v6, log_errors);
+        get_handle(instance).process(&socket_v4, &socket_v6, log_errors);
     }
 }
 
@@ -285,12 +278,16 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
 
 // Pick implementation for current platform, or fallback to panic
 
-#[cfg(not(any(unix, windows)))]
-use fallback::to_socket;
 #[cfg(unix)]
 use unix_specific::to_socket;
 #[cfg(windows)]
 use windows_specific::to_socket;
+
+#[inline(always)]
+#[cfg(not(any(unix, windows)))]
+pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
+    panic!("Cannot convert UdpSocket handle for this platform");
+}
 
 #[cfg(unix)]
 mod unix_specific {
@@ -311,15 +308,5 @@ mod windows_specific {
     #[inline(always)]
     pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
         ManuallyDrop::new(UdpSocket::from_raw_socket(handle as RawSocket))
-    }
-}
-
-#[cfg(not(any(unix, windows)))]
-mod fallback {
-    use super::*;
-
-    #[inline(always)]
-    pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
-        panic!("Cannot convert UdpSocket handle for this platform");
     }
 }

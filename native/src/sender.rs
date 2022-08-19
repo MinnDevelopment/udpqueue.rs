@@ -9,7 +9,7 @@ use std::{
 
 // TODO: Consider using constant ring buffer
 struct Queue {
-    pub packets: VecDeque<Vec<u8>>, // the packets in the queue
+    pub packets: VecDeque<Box<[u8]>>, // the packets in the queue
     pub due_time: SystemTime,       // when the next packet needs to be sent
     pub key: i64, // key links to the send handler (so that each sender has its own queue of packets)
     pub address: SocketAddr, // the remote address to send our packets to
@@ -28,7 +28,7 @@ impl Queue {
     }
 
     #[inline(always)]
-    pub fn pop(&mut self) -> Option<Vec<u8>> {
+    pub fn pop(&mut self) -> Option<Box<[u8]>> {
         self.packets.pop_front()
     }
 }
@@ -54,7 +54,7 @@ struct QueueState {
 }
 
 struct QueueEntry {
-    packet: Vec<u8>,
+    packet: Box<[u8]>,
     due_time: SystemTime,
     key: i64,
     address: SocketAddr,
@@ -110,7 +110,7 @@ impl QueueState {
         &mut self,
         key: i64,
         address: SocketAddr,
-        data: Vec<u8>,
+        data: Box<[u8]>,
         socket: Option<ManuallyDrop<UdpSocket>>,
     ) {
         let queue = if let Some(queue) = self.index.get_mut(&key) {
@@ -170,7 +170,7 @@ impl Manager {
         &self,
         key: i64,
         address: SocketAddr,
-        data: Vec<u8>,
+        data: Box<[u8]>,
         socket: Option<ManuallyDrop<UdpSocket>>,
     ) -> bool {
         match self.state.lock() {

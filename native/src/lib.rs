@@ -24,12 +24,10 @@ fn parse_address(
 }
 
 #[inline(always)]
-fn copy_data(env: &JNIEnv, buffer: jobject, length: jint) -> Result<Vec<u8>, jni::errors::Error> {
+fn copy_data(env: &JNIEnv, buffer: jobject, length: jint) -> Result<Box<[u8]>, jni::errors::Error> {
     let length = length as usize;
-    let mut buf = vec![0; length];
     let slice = env.get_direct_buffer_address(buffer.into())?;
-    buf.copy_from_slice(&slice[..length]);
-    Ok(buf)
+    Ok(Box::from(&slice[..length]))
 }
 
 /// Wrapper for System.getProperty(String): String?
@@ -133,7 +131,7 @@ fn queue_packet(
         return false;
     }
 
-    let data: Vec<u8> = match copy_data(&env, data_buffer, data_length) {
+    let data = match copy_data(&env, data_buffer, data_length) {
         Ok(d) => d,
         Err(e) => {
             eprintln!("Failed to copy data: {e}");

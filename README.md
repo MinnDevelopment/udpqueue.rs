@@ -31,7 +31,7 @@ MacOS/Darwin universal (x86 intel & aarch64 M1):
 
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-darwin?color=blue&label=darwin&logo=apple&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-darwin)
 
-More platforms can be added on request. Linux shared libraries are compiled against **GLIBC 2.25**.
+More platforms can be added on request. Linux shared libraries are compiled against **GLIBC 2.18**.
 
 While this project is published to maven-central, the lavaplayer commons dependency is currently only available through jcenter. So you will have to depend on jcenter for now.
 
@@ -55,8 +55,8 @@ dependencies {
 ```gradle
 dependencies {
     // Fully modular, choose which platforms to use!
-    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.1") // adds linux 64bit
-    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.1") // adds windows 64bit
+    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.2") // adds linux 64bit
+    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.2") // adds windows 64bit
 }
 ```
 
@@ -68,12 +68,12 @@ To add all supported platforms, you can use this:
 
 ```gradle
 dependencies {
-    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.1")
-    implementation("club.minnced:udpqueue-native-linux-x86:0.2.1")
-    implementation("club.minnced:udpqueue-native-linux-aarch64:0.2.1")
-    implementation("club.minnced:udpqueue-native-linux-arm:0.2.1")
-    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.1")
-    implementation("club.minnced:udpqueue-native-win-x86:0.2.1")
-    implementation("club.minnced:udpqueue-native-darwin:0.2.1")
+    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.2")
+    implementation("club.minnced:udpqueue-native-linux-x86:0.2.2")
+    implementation("club.minnced:udpqueue-native-linux-aarch64:0.2.2")
+    implementation("club.minnced:udpqueue-native-linux-arm:0.2.2")
+    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.2")
+    implementation("club.minnced:udpqueue-native-win-x86:0.2.2")
+    implementation("club.minnced:udpqueue-native-darwin:0.2.2")
 }
 ```

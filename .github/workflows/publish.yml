@@ -20,11 +20,11 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
           - target: i686-unknown-linux-gnu
-            deps: apt-get install gcc-multilib
+            deps: apt-get install -y gcc-multilib
           - target: aarch64-unknown-linux-gnu
-            deps: apt-get install gcc-aarch64-linux-gnu
+            deps: apt-get install -y gcc-aarch64-linux-gnu
           - target: armv7-unknown-linux-gnueabihf
-            deps: apt-get install gcc-arm-linux-gnueabihf
+            deps: apt-get install -y gcc-arm-linux-gnueabihf
 
     name: Publish ${{ matrix.target }}
     runs-on: ubuntu-20.04

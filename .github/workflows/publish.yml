@@ -27,6 +27,7 @@ jobs:
             deps: apt-get install -y gcc-arm-linux-gnueabihf
 
     name: Publish ${{ matrix.target }}
+    environment: MavenRelease
     runs-on: ubuntu-20.04
     container:
       image: ubuntu:16.04
@@ -69,6 +70,7 @@ jobs:
           - target: i686-pc-windows-msvc
 
     name: Publish ${{ matrix.target }}
+    environment: MavenRelease
     runs-on: windows-2019
     steps:
       - name: Checkout sources

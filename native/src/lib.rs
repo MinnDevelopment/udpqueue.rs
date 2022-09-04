@@ -1,9 +1,8 @@
 use jni::objects::{JClass, JString, JValue};
 use jni::sys::{jboolean, jint, jlong, jobject};
 use jni::JNIEnv;
-use sender::Manager;
-use std::mem::ManuallyDrop;
-use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket};
+use sender::{Manager, Sockets};
+use std::net::{SocketAddr, UdpSocket};
 use std::time::Duration;
 
 mod sender;
@@ -125,7 +124,7 @@ fn queue_packet(
     port: jint,
     data_buffer: jobject,
     data_length: jint,
-    socket: Option<ManuallyDrop<UdpSocket>>,
+    socket: Option<UdpSocket>,
 ) -> bool {
     if instance == 0 {
         return false;
@@ -197,14 +196,9 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     me: jobject,
     instance: jlong,
 ) {
-    let socket_v4 =
-        UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).expect("Could not bind IPv4 UdpSocket");
-    let socket_v6 =
-        UdpSocket::bind((Ipv6Addr::UNSPECIFIED, 0)).expect("Could not bind IPv6 UdpSocket");
-
     let log_errors = is_log_errors(&env);
     if instance != 0 {
-        get_handle(instance).process(&socket_v4, &socket_v6, log_errors);
+        get_handle(instance).process(log_errors);
     }
 }
 
@@ -230,12 +224,34 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     socketv4: jlong,
     socketv6: jlong,
 ) {
-    let socket_v6 = unsafe { to_socket(socketv6) };
-    let socket_v4 = unsafe { to_socket(socketv4) };
+    if instance == 0 {
+        return;
+    }
+
+    assert!(
+        socketv4 > 0,
+        "Invalid socket handle for IPv4 provided: {socketv4}"
+    );
+
+    let v4 = unsafe { to_socket(socketv4) };
+
+    let v6 = if socketv6 > 0 {
+        Some(unsafe { to_socket(socketv6) })
+    } else {
+        None
+    };
+
+    let sockets = Sockets { v4, v6 };
 
     let log_errors = is_log_errors(&env);
-    if instance != 0 {
-        get_handle(instance).process(&socket_v4, &socket_v6, log_errors);
+    get_handle(instance).process_with_sockets(log_errors, &sockets);
+
+    // This gives up ownership of the file descriptors back to the caller, allowing them to stay open
+    unsafe {
+        to_fd(sockets.v4);
+        if let Some(v6) = sockets.v6 {
+            to_fd(v6);
+        }
     }
 }
 
@@ -252,14 +268,12 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     data_length: jint,
     socket_handle: jlong,
 ) -> jboolean {
-    let socket = unsafe { to_socket(socket_handle) };
-    if let Err(e) = socket.try_clone() {
-        eprintln!(
-            "Cannot use UdpSocket because cloning is not supported. Error: {}",
-            e
-        );
-        return 0;
+    if socket_handle < 1 {
+        eprintln!("[udpqueue] Invalid socket handle provided for packet: {socket_handle}");
+        return false as jboolean;
     }
+
+    let socket = unsafe { to_socket(socket_handle) };
 
     queue_packet(
         env,
@@ -276,35 +290,54 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
 
 // Pick implementation for current platform, or fallback to panic
 
-#[cfg(unix)]
-use unix_specific::to_socket;
-#[cfg(windows)]
-use windows_specific::to_socket;
-
-#[inline(always)]
 #[cfg(not(any(unix, windows)))]
-pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
-    panic!("Cannot convert UdpSocket handle for this platform");
+use fallback::*;
+#[cfg(unix)]
+use unix_specific::*;
+#[cfg(windows)]
+use windows_specific::*;
+
+#[cfg(not(any(unix, windows)))]
+mod fallback {
+    #[inline(always)]
+    pub unsafe fn to_socket(handle: jlong) -> UdpSocket {
+        panic!("Cannot convert UdpSocket handle for this platform");
+    }
+
+    #[inline(always)]
+    pub unsafe fn to_fd(socket: UdpSocket) -> RawFd {
+        panic!("Cannot convert UdpSocket handle for this platform");
+    }
 }
 
 #[cfg(unix)]
 mod unix_specific {
     use super::*;
-    use std::os::unix::io::{FromRawFd, RawFd};
+    use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
 
     #[inline(always)]
-    pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
-        ManuallyDrop::new(UdpSocket::from_raw_fd(handle as RawFd))
+    pub unsafe fn to_socket(handle: jlong) -> UdpSocket {
+        UdpSocket::from_raw_fd(handle as RawFd)
+    }
+
+    #[inline(always)]
+    pub unsafe fn to_fd(socket: UdpSocket) -> RawFd {
+        socket.into_raw_fd()
     }
 }
 
 #[cfg(windows)]
 mod windows_specific {
     use super::*;
-    use std::os::windows::io::{FromRawSocket, RawSocket};
+    use std::os::windows::io::{FromRawSocket, IntoRawSocket, RawSocket};
 
     #[inline(always)]
-    pub unsafe fn to_socket(handle: jlong) -> ManuallyDrop<UdpSocket> {
-        ManuallyDrop::new(UdpSocket::from_raw_socket(handle as RawSocket))
+    pub unsafe fn to_socket(handle: jlong) -> UdpSocket {
+        UdpSocket::from_raw_socket(handle as RawSocket)
+    }
+
+    #[inline(always)]
+    pub unsafe fn to_fd(socket: UdpSocket) -> RawSocket {
+        socket.into_raw_socket()
     }
 }

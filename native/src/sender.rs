@@ -1,23 +1,23 @@
 use std::{
     collections::{HashMap, VecDeque},
+    io,
     mem::ManuallyDrop,
-    net::{SocketAddr, UdpSocket},
-    sync::{Condvar, Mutex, MutexGuard},
+    net::{Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket},
+    sync::{Arc, Condvar, Mutex, MutexGuard},
     thread::sleep,
     time::{Duration, SystemTime},
 };
 
-// TODO: Consider using constant ring buffer
 struct Queue {
-    pub packets: VecDeque<Box<[u8]>>, // the packets in the queue
-    pub due_time: SystemTime,       // when the next packet needs to be sent
-    pub key: i64, // key links to the send handler (so that each sender has its own queue of packets)
-    pub address: SocketAddr, // the remote address to send our packets to
-    pub socket: Option<ManuallyDrop<UdpSocket>>, // the socket to send our packets on
+    packets: VecDeque<Box<[u8]>>,                 // the packets in the queue
+    due_time: SystemTime,                         // when the next packet needs to be sent
+    key: i64, // key links to the send handler (so that each sender has its own queue of packets)
+    address: SocketAddr, // the remote address to send our packets to
+    socket: Option<Arc<ManuallyDrop<UdpSocket>>>, // the socket to send our packets on
 }
 
 impl Queue {
-    pub fn new(address: SocketAddr, key: i64, capacity: usize) -> Self {
+    fn new(address: SocketAddr, key: i64, capacity: usize) -> Self {
         Self {
             packets: VecDeque::with_capacity(capacity),
             due_time: SystemTime::now(),
@@ -28,7 +28,7 @@ impl Queue {
     }
 
     #[inline(always)]
-    pub fn pop(&mut self) -> Option<Box<[u8]>> {
+    fn pop(&mut self) -> Option<Box<[u8]>> {
         self.packets.pop_front()
     }
 }
@@ -38,6 +38,43 @@ pub enum Status {
     Running,
     Shutdown,
     Destroyed,
+}
+
+pub struct Sockets {
+    pub v4: UdpSocket,
+    pub v6: Option<UdpSocket>,
+}
+
+impl Sockets {
+    fn bind(log_errors: bool) -> (UdpSocket, Option<UdpSocket>) {
+        // IPv4 is required by discord since every voice server uses it
+        let v4 = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))
+            .expect("[udpqueue] Could not bind IPv4 UdpSocket");
+
+        // IPv6 is optional since discord doesn't use it really, its only here for future proofing
+        let v6 = match UdpSocket::bind((Ipv6Addr::UNSPECIFIED, 0)) {
+            Ok(s) => Some(s),
+            Err(e) if log_errors => {
+                eprintln!("[udpqueue] Could not bind IPv6 UdpSocket: {e}");
+                None
+            }
+            _ => None,
+        };
+
+        (v4, v6)
+    }
+
+    #[inline]
+    fn send_to(&self, buf: &[u8], addr: SocketAddr) -> io::Result<usize> {
+        match (addr, &self.v6) {
+            (SocketAddr::V4(address), _) => self.v4.send_to(buf, address),
+            (SocketAddr::V6(address), Some(v6)) => v6.send_to(buf, address),
+            _ => Err(io::Error::new(
+                io::ErrorKind::NotConnected,
+                "socket for IPv6 not bound",
+            )),
+        }
+    }
 }
 
 pub struct Manager {
@@ -58,7 +95,7 @@ struct QueueEntry {
     due_time: SystemTime,
     key: i64,
     address: SocketAddr,
-    explicit_socket: Option<ManuallyDrop<UdpSocket>>,
+    explicit_socket: Option<Arc<ManuallyDrop<UdpSocket>>>,
 }
 
 impl QueueState {
@@ -111,13 +148,13 @@ impl QueueState {
         key: i64,
         address: SocketAddr,
         data: Box<[u8]>,
-        socket: Option<ManuallyDrop<UdpSocket>>,
+        socket: Option<UdpSocket>,
     ) {
         let queue = if let Some(queue) = self.index.get_mut(&key) {
             queue
         } else {
             let mut q = Queue::new(address, key, self.capacity);
-            q.socket = socket;
+            q.socket = socket.map(ManuallyDrop::new).map(Arc::new);
             self.index.insert(key, q);
             self.queues.push_front(key); // queue should be immediately used on next iteration!
             self.index
@@ -171,7 +208,7 @@ impl Manager {
         key: i64,
         address: SocketAddr,
         data: Box<[u8]>,
-        socket: Option<ManuallyDrop<UdpSocket>>,
+        socket: Option<UdpSocket>,
     ) -> bool {
         match self.state.lock() {
             Ok(mut state) if state.status == Status::Running => {
@@ -188,18 +225,14 @@ impl Manager {
 
         while state.status == Status::Running {
             let mut context = None;
-            let entry = state.next().and_then(|q| {
-                context = Some((q.key, q.due_time));
-                q.pop().map(|p| QueueEntry {
-                    packet: p,
-                    due_time: q.due_time,
-                    key: q.key,
-                    address: q.address,
-                    explicit_socket: q
-                        .socket
-                        .as_ref()
-                        .and_then(|s| s.try_clone().ok())
-                        .map(ManuallyDrop::new),
+            let entry = state.next().and_then(|queue| {
+                context = Some((queue.key, queue.due_time));
+                queue.pop().map(|packet| QueueEntry {
+                    packet,
+                    due_time: queue.due_time,
+                    key: queue.key,
+                    address: queue.address,
+                    explicit_socket: queue.socket.clone(),
                 })
             });
 
@@ -223,7 +256,13 @@ impl Manager {
         None
     }
 
-    pub fn process(&self, socket_v4: &UdpSocket, socket_v6: &UdpSocket, log_errors: bool) {
+    #[inline(always)]
+    pub fn process(&self, log_errors: bool) {
+        let (v4, v6) = Sockets::bind(log_errors);
+        self.process_with_sockets(log_errors, &Sockets { v4, v6 })
+    }
+
+    pub fn process_with_sockets(&self, log_errors: bool, sockets: &Sockets) {
         while let Some(entry) = self.get_next() {
             let QueueEntry {
                 packet,
@@ -238,15 +277,13 @@ impl Manager {
 
             let result = if let Some(socket) = explicit_socket {
                 socket.send_to(&packet, address)
-            } else if address.is_ipv4() {
-                socket_v4.send_to(&packet, address)
             } else {
-                socket_v6.send_to(&packet, address)
+                sockets.send_to(&packet, address)
             };
 
             // Disable this using -Dudpqueue.log_errors=false in your java command line
             match result {
-                Err(e) if log_errors => eprintln!("[udpqueue] Error sending packet: {}", e),
+                Err(e) if log_errors => eprintln!("[udpqueue] Error sending packet: {e}"),
                 _ => {}
             }
 

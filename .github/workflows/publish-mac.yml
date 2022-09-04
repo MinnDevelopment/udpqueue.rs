@@ -16,6 +16,7 @@ concurrency:
 jobs:
   build:
     name: Build macOS universal binary
+    environment: MavenRelease
     runs-on: macos-11
     steps:
       - name: Checkout sources

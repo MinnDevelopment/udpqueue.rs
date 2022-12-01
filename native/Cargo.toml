@@ -13,3 +13,4 @@ crate_type = ["cdylib"]
 opt-level = 3
 lto = true
 strip = "debuginfo"
+panic = "abort"

@@ -300,12 +300,12 @@ use windows_specific::*;
 #[cfg(not(any(unix, windows)))]
 mod fallback {
     #[inline(always)]
-    pub unsafe fn to_socket(handle: jlong) -> UdpSocket {
+    pub(crate) unsafe fn to_socket(handle: jlong) -> UdpSocket {
         panic!("Cannot convert UdpSocket handle for this platform");
     }
 
     #[inline(always)]
-    pub unsafe fn to_fd(socket: UdpSocket) -> RawFd {
+    pub(crate) unsafe fn to_fd(socket: UdpSocket) -> RawFd {
         panic!("Cannot convert UdpSocket handle for this platform");
     }
 }
@@ -316,12 +316,12 @@ mod unix_specific {
     use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
 
     #[inline(always)]
-    pub unsafe fn to_socket(handle: jlong) -> UdpSocket {
+    pub(crate) unsafe fn to_socket(handle: jlong) -> UdpSocket {
         UdpSocket::from_raw_fd(handle as RawFd)
     }
 
     #[inline(always)]
-    pub unsafe fn to_fd(socket: UdpSocket) -> RawFd {
+    pub(crate) unsafe fn to_fd(socket: UdpSocket) -> RawFd {
         socket.into_raw_fd()
     }
 }
@@ -332,12 +332,12 @@ mod windows_specific {
     use std::os::windows::io::{FromRawSocket, IntoRawSocket, RawSocket};
 
     #[inline(always)]
-    pub unsafe fn to_socket(handle: jlong) -> UdpSocket {
+    pub(crate) unsafe fn to_socket(handle: jlong) -> UdpSocket {
         UdpSocket::from_raw_socket(handle as RawSocket)
     }
 
     #[inline(always)]
-    pub unsafe fn to_fd(socket: UdpSocket) -> RawSocket {
+    pub(crate) unsafe fn to_fd(socket: UdpSocket) -> RawSocket {
         socket.into_raw_socket()
     }
 }

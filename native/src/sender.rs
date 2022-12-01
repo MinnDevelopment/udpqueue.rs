@@ -150,17 +150,12 @@ impl QueueState {
         data: Box<[u8]>,
         socket: Option<UdpSocket>,
     ) {
-        let queue = if let Some(queue) = self.index.get_mut(&key) {
-            queue
-        } else {
-            let mut q = Queue::new(address, key, self.capacity);
+        let queue = self.index.entry(key).or_insert_with_key(|&k| {
+            self.queues.push_front(k); // queue should be immediately used on next iteration!
+            let mut q = Queue::new(address, k, self.capacity);
             q.socket = socket.map(ManuallyDrop::new).map(Arc::new);
-            self.index.insert(key, q);
-            self.queues.push_front(key); // queue should be immediately used on next iteration!
-            self.index
-                .get_mut(&key)
-                .expect("Queue must be in index after insert call")
-        };
+            q
+        });
 
         queue.packets.push_back(data);
     }
@@ -175,6 +170,7 @@ impl Manager {
         }
     }
 
+    #[inline]
     pub(crate) fn wait_shutdown(&self) {
         let mut guard = self.state();
         while guard.status != Status::Destroyed {

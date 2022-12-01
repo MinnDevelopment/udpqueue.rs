@@ -1,6 +1,6 @@
 [package]
 name = "udpqueue"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 
 [dependencies]
@@ -13,3 +13,4 @@ crate_type = ["cdylib"]
 opt-level = 3
 lto = true
 strip = "debuginfo"
+panic = "abort"

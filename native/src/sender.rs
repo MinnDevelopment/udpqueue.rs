@@ -34,15 +34,15 @@ impl Queue {
 }
 
 #[derive(PartialEq, PartialOrd, Ord, Eq)]
-pub enum Status {
+pub(crate) enum Status {
     Running,
     Shutdown,
     Destroyed,
 }
 
-pub struct Sockets {
-    pub v4: UdpSocket,
-    pub v6: Option<UdpSocket>,
+pub(crate) struct Sockets {
+    pub(crate) v4: UdpSocket,
+    pub(crate) v6: Option<UdpSocket>,
 }
 
 impl Sockets {
@@ -77,7 +77,7 @@ impl Sockets {
     }
 }
 
-pub struct Manager {
+pub(crate) struct Manager {
     state: Mutex<QueueState>,
     condvar: Condvar,
     interval: Duration,
@@ -150,24 +150,19 @@ impl QueueState {
         data: Box<[u8]>,
         socket: Option<UdpSocket>,
     ) {
-        let queue = if let Some(queue) = self.index.get_mut(&key) {
-            queue
-        } else {
-            let mut q = Queue::new(address, key, self.capacity);
+        let queue = self.index.entry(key).or_insert_with_key(|&k| {
+            self.queues.push_front(k); // queue should be immediately used on next iteration!
+            let mut q = Queue::new(address, k, self.capacity);
             q.socket = socket.map(ManuallyDrop::new).map(Arc::new);
-            self.index.insert(key, q);
-            self.queues.push_front(key); // queue should be immediately used on next iteration!
-            self.index
-                .get_mut(&key)
-                .expect("Queue must be in index after insert call")
-        };
+            q
+        });
 
         queue.packets.push_back(data);
     }
 }
 
 impl Manager {
-    pub fn new(capacity: usize, interval: Duration) -> Self {
+    pub(crate) fn new(capacity: usize, interval: Duration) -> Self {
         Self {
             interval,
             state: Mutex::new(QueueState::new(capacity)),
@@ -175,7 +170,8 @@ impl Manager {
         }
     }
 
-    pub fn wait_shutdown(&self) {
+    #[inline]
+    pub(crate) fn wait_shutdown(&self) {
         let mut guard = self.state();
         while guard.status != Status::Destroyed {
             guard = self.condvar.wait(guard).unwrap();
@@ -188,22 +184,22 @@ impl Manager {
     }
 
     #[inline(always)]
-    pub fn remaining(&self, key: i64) -> usize {
+    pub(crate) fn remaining(&self, key: i64) -> usize {
         self.state().remaining(key)
     }
 
     #[inline(always)]
-    pub fn shutdown(&self) {
+    pub(crate) fn shutdown(&self) {
         self.state().shutdown();
         self.condvar.notify_all();
     }
 
     #[inline(always)]
-    pub fn delete_queue(&self, key: i64) -> bool {
+    pub(crate) fn delete_queue(&self, key: i64) -> bool {
         self.state().delete_queue(key)
     }
 
-    pub fn enqueue_packet(
+    pub(crate) fn enqueue_packet(
         &self,
         key: i64,
         address: SocketAddr,
@@ -257,12 +253,12 @@ impl Manager {
     }
 
     #[inline(always)]
-    pub fn process(&self, log_errors: bool) {
+    pub(crate) fn process(&self, log_errors: bool) {
         let (v4, v6) = Sockets::bind(log_errors);
         self.process_with_sockets(log_errors, &Sockets { v4, v6 })
     }
 
-    pub fn process_with_sockets(&self, log_errors: bool, sockets: &Sockets) {
+    pub(crate) fn process_with_sockets(&self, log_errors: bool, sockets: &Sockets) {
         while let Some(entry) = self.get_next() {
             let QueueEntry {
                 packet,

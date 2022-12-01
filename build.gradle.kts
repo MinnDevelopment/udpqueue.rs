@@ -48,7 +48,7 @@ subprojects {
     }
 
     group = "club.minnced"
-    version = "0.2.5"
+    version = "0.2.6"
 
     // See https://github.com/sedmelluq/lavaplayer/blob/master/common/src/main/java/com/sedmelluq/lava/common/natives/architecture/DefaultArchitectureTypes.java
     // identifier is the suffix used after the system name

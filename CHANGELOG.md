@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.6 - 2022/12/01
+
+- Some memory and efficiency improvements
+
 ## v0.2.5 - 2022/09/04
 
 - Make IPv6 optional and improve socket ownership (#5)

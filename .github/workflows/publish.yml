@@ -19,12 +19,20 @@ jobs:
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
+          - target: x86_64-unknown-linux-musl
+            deps: apt-get install musl-dev
           - target: i686-unknown-linux-gnu
             deps: apt-get install -y gcc-multilib
+          - target: i686-unknown-linux-musl
+            deps: apt-get install -y gcc-multilib musl-dev
           - target: aarch64-unknown-linux-gnu
             deps: apt-get install -y gcc-aarch64-linux-gnu
+          - target: aarch64-unknown-linux-musl
+            deps: apt-get install -y gcc-aarch64-linux-gnu musl-dev
           - target: armv7-unknown-linux-gnueabihf
             deps: apt-get install -y gcc-arm-linux-gnueabihf
+          - target: armv7-unknown-linux-musleabihf
+            deps: apt-get install -y gcc-arm-linux-gnueabihf musl-dev
 
     name: Publish ${{ matrix.target }}
     environment: MavenRelease

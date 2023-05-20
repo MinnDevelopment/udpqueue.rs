@@ -50,7 +50,7 @@ jobs:
         working-directory: native
         run: cargo build -r --target=${{ matrix.target }}
       - name: Printing Information
-        run: ldd -v ./native/target/${{ matrix.target }}/release/libudpqueue.so
+        run: ldd ./native/target/${{ matrix.target }}/release/libudpqueue.so
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v1
         with:

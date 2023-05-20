@@ -52,7 +52,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: './native/target/${{ matrix.target }}/release/*udpqueue*'
+          path: './native/target/${{ matrix.target }}/release/libudpqueue.so'
       - name: Printing Information
         run: ldd -v ./native/target/${{ matrix.target }}/release/libudpqueue.so
       # - name: Publish

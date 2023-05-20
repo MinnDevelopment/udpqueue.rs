@@ -16,10 +16,7 @@ jobs:
           - target: x86_64-unknown-linux-musl
             deps: |
               apk add musl
-              mkdir -p /root/musl
-              pushd /root/musl
-              curl -q https://musl.cc/x86_64-linux-musl-cross.tgz | tar xzf -
-              popd
+              curl -q https://musl.cc/x86_64-linux-musl-cross.tgz | tar xzf - -C /root/musl
           # - target: i686-unknown-linux-musl
           #   deps: apk add gcc-multilib musl
           # - target: aarch64-unknown-linux-musl

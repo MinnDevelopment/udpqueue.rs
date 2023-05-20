@@ -49,12 +49,12 @@ jobs:
       - name: Compile natives
         working-directory: native
         run: cargo build -r --target=${{ matrix.target }}
+      - name: Printing Information
+        run: ldd -v ./native/target/${{ matrix.target }}/release/libudpqueue.so
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: './native/target/${{ matrix.target }}/release/libudpqueue.so'
-      - name: Printing Information
-        run: ldd -v ./native/target/${{ matrix.target }}/release/libudpqueue.so
+          path: './native/target/${{ matrix.target }}/release'
       # - name: Publish
       #   env:
       #     ORG_GRADLE_PROJECT_ossrhUser: ${{ secrets.OSSRH_USER }}

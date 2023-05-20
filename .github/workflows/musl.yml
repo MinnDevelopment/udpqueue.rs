@@ -1,15 +1,8 @@
-name: publish-natives
+name: musl
 
 on:
-  pull_request:
-    branches: [ "master" ]
   push:
-    branches: [ "master" ]
-    paths:
-      - '.github/workflows/publish.yml' # when new targets are added
-      - 'build.gradle.kts' # when the root build script changes
-      - 'api' # when api source is changed
-      - 'native' # when natives are changed
+    branches: [ "feature/musl-linux" ]
 
 concurrency:
   group: "pub"
@@ -44,7 +37,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Install Essentials
         run: |
-          apk add curl gcc musl openjdk-8-jdk-headless
+          apk add curl gcc
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af #@v1
         with:

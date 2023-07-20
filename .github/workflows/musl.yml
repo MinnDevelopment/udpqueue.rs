@@ -18,10 +18,13 @@ jobs:
               apk add musl openjdk8
               mkdir -p /root/musl
               curl -q https://musl.cc/x86_64-linux-musl-cross.tgz | tar xzf - -C /root/musl
+          - target: aarch64-unknown-linux-musl
+            deps: |
+              apk add musl openjdk8
+              mkdir -p /root/musl
+              curl -q https://musl.cc/aarch64-linux-musl-cross.tgz | tar xzf - -C /root/musl
           # - target: i686-unknown-linux-musl
           #   deps: apk add gcc-multilib musl
-          # - target: aarch64-unknown-linux-musl
-          #   deps: apt-get gcc-aarch64-linux-gnu musl
           # - target: armv7-unknown-linux-musleabihf
           #   deps: apt-get gcc-arm-linux-gnueabihf musl
 

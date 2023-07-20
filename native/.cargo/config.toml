@@ -13,4 +13,4 @@ rustflags = ["-C", "target-feature=-crt-static"]
 linker = "arm-linux-gnueabihf-gcc"
 [target.aarch64-unknown-linux-musl]
 rustflags = ["-C", "target-feature=-crt-static"]
-linker = "aarch64-linux-gnu-gcc"
+linker = "/root/musl/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc"

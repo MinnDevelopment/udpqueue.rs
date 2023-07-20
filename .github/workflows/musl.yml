@@ -46,13 +46,12 @@ jobs:
         with:
           toolchain: stable
           target: ${{ matrix.target }}
-          components: clippy
       - name: Install linker dependencies
         run: ${{ matrix.deps }}
         if: ${{ matrix.deps != '' }}
       - name: Compile natives
         working-directory: native
-        run: cargo build -r --target=${{ matrix.target }}
+        run: cargo build -r --target ${{ matrix.target }}
       - name: Printing Information
         run: ldd ./native/target/${{ matrix.target }}/release/libudpqueue.so
       - name: Publish

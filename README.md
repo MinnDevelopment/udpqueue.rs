@@ -16,11 +16,13 @@ Linux x86 (intel):
 
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-linux-x86-64?color=blue&label=linux-x86-64&logo=linux&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-linux-x86-64)
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-linux-x86?color=blue&label=linux-x86&logo=linux&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-linux-x86)
+[ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-linux-musl-x86-64?color=blue&label=linux-x86&logo=linux&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-linux-musl-x86)
 
 Linux ARM (v7 and x64):
 
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-linux-aarch64?color=blue&label=linux-aarch64&logo=linux&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-linux-aarch64)
 [ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-linux-arm?color=blue&label=linux-arm&logo=linux&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-linux-arm)
+[ ![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-linux-musl-aarch64?color=blue&label=linux-aarch64&logo=linux&logoColor=white) ](https://search.maven.org/artifact/club.minnced/udpqueue-native-linux-musl-aarch64)
 
 Windows x86 (intel):
 
@@ -73,9 +75,7 @@ dependencies {
     implementation("club.minnced:udpqueue-native-linux-aarch64:0.2.7")
     implementation("club.minnced:udpqueue-native-linux-arm:0.2.7")
     implementation("club.minnced:udpqueue-native-linux-musl-x86-64:0.2.7")
-    implementation("club.minnced:udpqueue-native-linux-musl-x86:0.2.7")
     implementation("club.minnced:udpqueue-native-linux-musl-aarch64:0.2.7")
-    implementation("club.minnced:udpqueue-native-linux-musl-arm:0.2.7")
     implementation("club.minnced:udpqueue-native-win-x86-64:0.2.7")
     implementation("club.minnced:udpqueue-native-win-x86:0.2.7")
     implementation("club.minnced:udpqueue-native-darwin:0.2.7")

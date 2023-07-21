@@ -10,7 +10,7 @@ on:
       - 'native' # when natives are changed
 
 concurrency:
-  group: "pub"
+  group: "pub-musl"
   cancel-in-progress: true
 
 jobs:

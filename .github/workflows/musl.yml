@@ -16,15 +16,10 @@ jobs:
           - target: x86_64-unknown-linux-musl
             deps: |
               apk add musl openjdk8
-              mkdir -p /root/musl
-              curl -q https://musl.cc/x86_64-linux-musl-cross.tgz | tar xzf - -C /root/musl
-              ln -s /root/musl/x86_64-linux-musl-cross/bin/x86_64-linux-musl-gcc /usr/bin/gcc-musl
           - target: aarch64-unknown-linux-musl
             deps: |
               apk add musl openjdk8
-              mkdir -p /root/musl
               curl -q https://musl.cc/aarch64-linux-musl-cross.tgz | tar xzf - -C /root/musl
-              ln -s /root/musl/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc /usr/bin/gcc-musl
           # - target: i686-unknown-linux-musl
           #   deps: apk add gcc-multilib musl
           # - target: armv7-unknown-linux-musleabihf
@@ -41,6 +36,8 @@ jobs:
       - name: Install Essentials
         run: |
           apk add curl gcc bash
+          mkdir -p /root/musl
+          curl -q https://musl.cc/x86_64-linux-musl-cross.tgz | tar xzf - -C /root/musl
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@0e66bd3e6b38ec0ad5312288c83e47c143e6b09e #@v1.0.6
         with:

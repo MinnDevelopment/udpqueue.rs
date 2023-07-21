@@ -49,8 +49,8 @@ jobs:
       - name: Compile natives
         working-directory: native
         run: cargo build -r --target ${{ matrix.target }}
-      - name: Printing Information
-        run: ldd ./native/target/${{ matrix.target }}/release/libudpqueue.so
+      # - name: Printing Information
+      #   run: ldd ./native/target/${{ matrix.target }}/release/libudpqueue.so
       - name: Publish
         env:
           ORG_GRADLE_PROJECT_ossrhUser: ${{ secrets.OSSRH_USER }}

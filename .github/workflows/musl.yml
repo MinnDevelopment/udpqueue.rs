@@ -2,7 +2,12 @@ name: musl
 
 on:
   push:
-    branches: [ "feature/musl-linux" ]
+    branches: [ "master" ]
+    paths:
+      - '.github/workflows/musl.yml' # when new targets are added
+      - 'build.gradle.kts' # when the root build script changes
+      - 'api' # when api source is changed
+      - 'native' # when natives are changed
 
 concurrency:
   group: "pub"
@@ -42,15 +47,13 @@ jobs:
         uses: dtolnay/rust-toolchain@0e66bd3e6b38ec0ad5312288c83e47c143e6b09e #@v1.0.6
         with:
           toolchain: stable
-          target: x86_64-unknown-linux-musl ${{ matrix.target }}
+          target: x86_64-unknown-linux-musl ${{ matrix.target }} # requires native target installed to build proc-macros2
       - name: Install linker dependencies
         run: ${{ matrix.deps }}
         if: ${{ matrix.deps != '' }}
       - name: Compile natives
         working-directory: native
         run: cargo build -r --target ${{ matrix.target }}
-      # - name: Printing Information
-      #   run: ldd ./native/target/${{ matrix.target }}/release/libudpqueue.so
       - name: Publish
         env:
           ORG_GRADLE_PROJECT_ossrhUser: ${{ secrets.OSSRH_USER }}

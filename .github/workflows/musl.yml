@@ -1,0 +1,66 @@
+name: musl
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - '.github/workflows/musl.yml' # when new targets are added
+      - 'build.gradle.kts' # when the root build script changes
+      - 'api' # when api source is changed
+      - 'native' # when natives are changed
+
+concurrency:
+  group: "pub"
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            deps: |
+              apk add musl openjdk8
+          - target: aarch64-unknown-linux-musl
+            deps: |
+              apk add musl openjdk8
+              curl -q https://musl.cc/aarch64-linux-musl-cross.tgz | tar xzf - -C /root/musl
+          # - target: i686-unknown-linux-musl
+          #   deps: apk add gcc-multilib musl
+          # - target: armv7-unknown-linux-musleabihf
+          #   deps: apt-get gcc-arm-linux-gnueabihf musl
+
+    name: Musl build ${{ matrix.target }}
+    environment: MavenRelease
+    runs-on: ubuntu-20.04
+    container:
+      image: alpine:3.18
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Install Essentials
+        run: |
+          apk add curl gcc bash
+          mkdir -p /root/musl
+          curl -q https://musl.cc/x86_64-linux-musl-cross.tgz | tar xzf - -C /root/musl
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@0e66bd3e6b38ec0ad5312288c83e47c143e6b09e #@v1.0.6
+        with:
+          toolchain: stable
+          target: x86_64-unknown-linux-musl ${{ matrix.target }} # requires native target installed to build proc-macros2
+      - name: Install linker dependencies
+        run: ${{ matrix.deps }}
+        if: ${{ matrix.deps != '' }}
+      - name: Compile natives
+        working-directory: native
+        run: cargo build -r --target ${{ matrix.target }}
+      - name: Publish
+        env:
+          ORG_GRADLE_PROJECT_ossrhUser: ${{ secrets.OSSRH_USER }}
+          ORG_GRADLE_PROJECT_ossrhPassword: ${{ secrets.OSSRH_PASSWORD }}
+          ORG_GRADLE_PROJECT_stagingProfile: ${{ secrets.STAGING_PROFILE_ID }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_KEY }}
+          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.GPG_KEYID }}
+        run: |
+          chmod u+x gradlew
+          ./gradlew --console plain --stacktrace -Ptarget="${{ matrix.target }}" native:publishToSonatype closeAndReleaseStagingRepository

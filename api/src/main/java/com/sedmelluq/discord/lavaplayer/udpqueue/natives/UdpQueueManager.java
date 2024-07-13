@@ -57,6 +57,7 @@ public class UdpQueueManager extends NativeResourceHolder {
    *
    * @param key Unique queue identifier
    * @param packet Packet to add to the queue
+   * @param address The remote socket address
    * @return True if adding the packet to the queue succeeded
    */
   public boolean queuePacket(long key, ByteBuffer packet, InetSocketAddress address) {
@@ -72,6 +73,33 @@ public class UdpQueueManager extends NativeResourceHolder {
       int port = address.getPort();
       String hostAddress = address.getAddress().getHostAddress();
       return library.queuePacket(instance, key, hostAddress, port, packetBuffer, length);
+    }
+  }
+
+  /**
+   * Adds one packet to the specified queue that will be sent with the specified socket.
+   * Will fail if the maximum size of the queue is reached. There is no need to manually create a queue,
+   * it is automatically created when the first packet is added to it and deleted when it becomes empty.
+   *
+   * @param key Unique queue identifier
+   * @param packet Packet to add to the queue
+   * @param address The remote socket address
+   * @param explicitSocket The socket file descriptor to use to send the packet
+   * @return True if adding the packet to the queue succeeded
+   */
+  public boolean queuePacketWithSocket(long key, ByteBuffer packet, InetSocketAddress address, long explicitSocket) {
+    synchronized (library) {
+      if (released) {
+        return false;
+      }
+
+      int length = packet.remaining();
+      packetBuffer.clear();
+      packetBuffer.put(packet);
+
+      int port = address.getPort();
+      String hostAddress = address.getAddress().getHostAddress();
+      return library.queuePacketWithSocket(instance, key, hostAddress, port, packetBuffer, length, explicitSocket);
     }
   }
 

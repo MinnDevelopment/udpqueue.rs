@@ -42,7 +42,6 @@ While this project is published to maven-central, the lavaplayer commons depende
 ```gradle
 repositories {
     mavenCentral()
-    jcenter()
 }
 
 dependencies {

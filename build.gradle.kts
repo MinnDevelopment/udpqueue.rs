@@ -37,7 +37,6 @@ if (enablePublishing) {
 subprojects {
     repositories {
         mavenCentral()
-        maven("https://jcenter.bintray.com/")
     }
 
     apply(plugin="java")
@@ -48,7 +47,7 @@ subprojects {
     }
 
     group = "club.minnced"
-    version = "0.2.7"
+    version = "0.2.8"
 
     // See https://github.com/sedmelluq/lavaplayer/blob/master/common/src/main/java/com/sedmelluq/lava/common/natives/architecture/DefaultArchitectureTypes.java
     // identifier is the suffix used after the system name

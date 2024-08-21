@@ -8,8 +8,9 @@ plugins {
 }
 
 dependencies {
+    api(project(":api"))
     // Explicit dependency to avoid having to republish api each time
-    api("club.minnced:udpqueue-api:0.1.1")
+//    api("club.minnced:udpqueue-api:0.2.8")
 }
 
 val processResources: Copy by tasks

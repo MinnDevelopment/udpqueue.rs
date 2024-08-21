@@ -1,0 +1,33 @@
+name: publish-natives-macos
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - '.github/workflows/publish-api.yml' # when new targets are added
+      - 'build.gradle.kts' # when the root build script changes
+      - 'api' # when api source is changed
+
+concurrency:
+  group: "pub-api"
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish API dependency
+    environment: MavenRelease
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Publish
+        env:
+          ORG_GRADLE_PROJECT_ossrhUser: ${{ secrets.OSSRH_USER }}
+          ORG_GRADLE_PROJECT_ossrhPassword: ${{ secrets.OSSRH_PASSWORD }}
+          ORG_GRADLE_PROJECT_stagingProfile: ${{ secrets.STAGING_PROFILE_ID }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_KEY }}
+          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.GPG_KEYID }}
+        run: |
+          chmod u+x gradlew
+          ./gradlew --console plain --stacktrace -Ptarget=x86_64-unknown-linux-gnu api:publishToSonatype closeAndReleaseStagingRepository

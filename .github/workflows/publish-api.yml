@@ -7,6 +7,8 @@ on:
       - '.github/workflows/publish-api.yml' # when new targets are added
       - 'build.gradle.kts' # when the root build script changes
       - 'api' # when api source is changed
+  workflow_dispatch:
+
 
 concurrency:
   group: "pub-api"

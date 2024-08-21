@@ -1,3 +1,6 @@
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
+
 plugins {
     `java-library`
     `maven-publish`
@@ -50,11 +53,30 @@ publishing.publications {
     }
 }
 
+
+val shouldPublish by lazy {
+    val conn = URL("https://repo1.maven.org/maven2/club/minnced/udpqueue-api/$version/").openConnection() as HttpsURLConnection
+    conn.requestMethod = "GET"
+    conn.connect()
+
+    conn.responseCode > 400
+}
+
 val signingKey: String? by project
+val signingPassword: String? by project
 
 if (signingKey != null) {
     signing {
-        useInMemoryPgpKeys(signingKey, null)
-        sign(*publishing.publications.toTypedArray())
+        useInMemoryPgpKeys(signingKey, signingPassword ?: "")
+        val publications = publishing.publications.toTypedArray()
+        sign(*publications)
     }
+} else {
+    println("Could not find signingKey")
+}
+
+// Only run publishing tasks if the version doesn't already exist
+
+tasks.withType<PublishToMavenRepository> {
+    enabled = enabled && shouldPublish
 }

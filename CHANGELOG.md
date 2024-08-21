@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.9 - 2024/08/21
+
+- Update dependencies
+- Remove jda-nas dependency requirement
+
+## v0.2.7 - 2024/07/21
+
+- Add support for musl libc
+
 ## v0.2.6 - 2022/12/01
 
 - Some memory and efficiency improvements

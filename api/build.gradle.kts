@@ -10,7 +10,7 @@ repositories {
 
 dependencies {
     implementation("org.slf4j:slf4j-api:1.7.25")
-    implementation("dev.arbjerg:lavaplayer:1.5.4")
+    implementation("dev.arbjerg:lava-common:1.5.4")
 }
 
 val javadoc: Javadoc by tasks

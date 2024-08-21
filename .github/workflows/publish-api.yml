@@ -1,4 +1,4 @@
-name: publish-natives-macos
+name: publish-api
 
 on:
   push:

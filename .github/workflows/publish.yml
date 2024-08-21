@@ -39,6 +39,8 @@ jobs:
           apt-get update -y
           apt-get upgrade -y
           apt-get install -y curl gcc openjdk-8-jdk-headless
+          curl --proto '=https' --tlsv1.2 --retry 10 --location --silent --show-error --fail "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
+          echo "$CARGO_HOME/bin" >> $GITHUB_PATH
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:

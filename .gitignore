@@ -4,6 +4,7 @@
 target
 build
 .gradle
+.kotlin
 
 native/src/main/natives
 

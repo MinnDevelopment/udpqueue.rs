@@ -1,8 +1,9 @@
 # Changelog
 
-## v0.2.10 - TBD
+## v0.2.10 - 2025/12/23
 
 - Update dependencies and modernize gradle project
+- Raised minimum supported GLIBC version to 2.27
 
 ## v0.2.9 - 2024/08/21
 

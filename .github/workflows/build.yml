@@ -1,0 +1,97 @@
+name: Build Project
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+
+jobs:
+  linux:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+          - target: i686-unknown-linux-gnu
+            deps: apt-get install -y gcc-multilib
+          - target: aarch64-unknown-linux-gnu
+            deps: apt-get install -y gcc-aarch64-linux-gnu
+          - target: armv7-unknown-linux-gnueabihf
+            deps: apt-get install -y gcc-arm-linux-gnueabihf
+
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:18.04
+    steps:
+      - name: Checkout sources
+        uses: taiki-e/checkout-action@v1
+      - name: Install Essentials
+        run: |
+          apt-get update -y
+          apt-get upgrade -y
+          apt-get install -y curl gcc openjdk-17-jdk-headless
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - name: Install linker dependencies
+        run: ${{ matrix.deps }}
+        if: ${{ matrix.deps != '' }}
+      - name: Run Gradle Build
+        run: ./gradlew build -Ptarget=${{ matrix.target }}
+
+  windows:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+          - target: i686-pc-windows-msvc
+
+    name: Build ${{ matrix.target }}
+    runs-on: windows-2022
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+      - name: Run Gradle Build
+        run: ./gradlew build -Ptarget=${{ matrix.target }}
+
+  macos:
+    name: Build macOS universal binary
+    runs-on: macos-14
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Compile natives
+        working-directory: native
+        run: |
+          rustup target add x86_64-apple-darwin
+          cargo build -r --target=x86_64-apple-darwin
+          rustup target add aarch64-apple-darwin
+          cargo build -r --target=aarch64-apple-darwin
+
+      - name: Create target directory for darwin
+        run: mkdir -p native/target/darwin/release
+
+      - name: Combine to universal dylib
+        run: lipo -create -output native/target/darwin/release/libudpqueue.dylib native/target/**/release/*.dylib
+
+      - name: Run Gradle Build
+        run: ./gradlew build -x cargoBuild -Ptarget=darwin

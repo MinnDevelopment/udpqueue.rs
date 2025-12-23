@@ -1,13 +1,6 @@
 name: publish-natives
 
 on:
-  push:
-    branches: [ "master" ]
-    paths:
-      - '.github/workflows/publish.yml' # when new targets are added
-      - 'build.gradle.kts' # when the root build script changes
-      - 'api' # when api source is changed
-      - 'native' # when natives are changed
   workflow_dispatch:
 
 concurrency:
@@ -39,7 +32,7 @@ jobs:
         run: |
           apt-get update -y
           apt-get upgrade -y
-          apt-get install -y curl gcc openjdk-8-jdk-headless
+          apt-get install -y curl gcc openjdk-25-jdk-headless
       - name: Setup rustup
         run: |
           curl --proto '=https' --tlsv1.2 --retry 10 --location --silent --show-error --fail "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y

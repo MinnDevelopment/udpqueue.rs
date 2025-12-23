@@ -74,6 +74,8 @@ configure<PublishingExtension> {
 }
 
 configure<JReleaserExtension> {
+    gitRootSearch = true
+
     release {
         github {
             enabled = false

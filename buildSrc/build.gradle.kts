@@ -14,7 +14,7 @@ repositories {
 
 dependencies {
     implementation(gradleApi())
-    implementation("org.jreleaser:jreleaser-gradle-plugin:1.21.0")
+    implementation("org.jreleaser:jreleaser-gradle-plugin:1.20.0")
 }
 
 kotlin {

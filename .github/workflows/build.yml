@@ -103,6 +103,26 @@ jobs:
       - name: Run Gradle Build
         run: ./gradlew build -Ptarget=${{ matrix.target }}
 
+  windows-aarch64:
+    name: Build aarch64-pc-windows-msvc
+    runs-on: windows-11-arm
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: aarch64-pc-windows-msvc
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'microsoft'
+          java-version: '17'
+          cache: 'gradle'
+      - name: Run Gradle Build
+        run: ./gradlew build -Ptarget=aarch64-pc-windows-msvc
+
   macos:
     name: Build macOS universal binary
     runs-on: macos-14

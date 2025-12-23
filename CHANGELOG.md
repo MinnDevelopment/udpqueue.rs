@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.11 - 2025/12/23
+
+- Add support for windows aarch64
+
 ## v0.2.10 - 2025/12/23
 
 - Update dependencies and modernize gradle project

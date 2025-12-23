@@ -30,9 +30,7 @@ public class DaemonThreadFactory implements ThreadFactory {
    * @param exitCallback Runnable to be executed when the thread exits.
    */
   public DaemonThreadFactory(String name, Runnable exitCallback) {
-    SecurityManager securityManager = System.getSecurityManager();
-
-    group = (securityManager != null) ? securityManager.getThreadGroup() : Thread.currentThread().getThreadGroup();
+    group = Thread.currentThread().getThreadGroup();
     namePrefix = "lava-daemon-pool-" + name + "-" + poolNumber.getAndIncrement() + "-thread-";
     this.exitCallback = exitCallback;
   }

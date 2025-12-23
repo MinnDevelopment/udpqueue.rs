@@ -1,13 +1,7 @@
 name: musl
 
 on:
-  push:
-    branches: [ "master" ]
-    paths:
-      - '.github/workflows/musl.yml' # when new targets are added
-      - 'build.gradle.kts' # when the root build script changes
-      - 'api' # when api source is changed
-      - 'native' # when natives are changed
+  workflow_dispatch:
 
 concurrency:
   group: "pub-musl"
@@ -37,14 +31,14 @@ jobs:
       image: alpine:3.18
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: taiki-e/checkout-action@v1
       - name: Install Essentials
         run: |
           apk add curl gcc bash
           mkdir -p /root/musl
           curl -q https://musl.cc/x86_64-linux-musl-cross.tgz | tar xzf - -C /root/musl
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@0e66bd3e6b38ec0ad5312288c83e47c143e6b09e #@v1.0.6
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           target: x86_64-unknown-linux-musl ${{ matrix.target }} # requires native target installed to build proc-macros2

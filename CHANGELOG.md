@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.10 - TBD
+
+- Update dependencies and modernize gradle project
+
 ## v0.2.9 - 2024/08/21
 
 - Update dependencies

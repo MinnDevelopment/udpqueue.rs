@@ -1,11 +1,9 @@
-name: publish-natives
+name: Build Project
 
 on:
-  workflow_dispatch:
-
-concurrency:
-  group: "pub"
-  cancel-in-progress: true
+  push:
+    branches: [ "master" ]
+  pull_request:
 
 jobs:
   linux:
@@ -20,8 +18,7 @@ jobs:
           - target: armv7-unknown-linux-gnueabihf
             deps: apt-get install -y gcc-arm-linux-gnueabihf
 
-    name: Publish ${{ matrix.target }}
-    environment: MavenRelease
+    name: Build ${{ matrix.target }}
     runs-on: ubuntu-latest
     container:
       image: ubuntu:18.04
@@ -41,14 +38,8 @@ jobs:
       - name: Install linker dependencies
         run: ${{ matrix.deps }}
         if: ${{ matrix.deps != '' }}
-      - name: Build and Publish
-        env:
-          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
-          JRELEASER_MAVENCENTRAL_TOKEN: ${{ secrets.MAVENCENTRAL_TOKEN }}
-          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
-          JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
-          JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: ./gradlew native:publish native:jreleaserRelease -Ptarget=${{ matrix.target }}
+      - name: Run Gradle Build
+        run: ./gradlew build -Ptarget=${{ matrix.target }}
 
   windows:
     strategy:
@@ -57,8 +48,7 @@ jobs:
           - target: x86_64-pc-windows-msvc
           - target: i686-pc-windows-msvc
 
-    name: Publish ${{ matrix.target }}
-    environment: MavenRelease
+    name: Build ${{ matrix.target }}
     runs-on: windows-2022
     steps:
       - name: Checkout sources
@@ -74,14 +64,8 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
-      - name: Build and Publish
-        env:
-          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
-          JRELEASER_MAVENCENTRAL_TOKEN: ${{ secrets.MAVENCENTRAL_TOKEN }}
-          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
-          JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
-          JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: ./gradlew native:publish native:jreleaserRelease -Ptarget=${{ matrix.target }}
+      - name: Run Gradle Build
+        run: ./gradlew build -Ptarget=${{ matrix.target }}
 
   macos:
     name: Build macOS universal binary
@@ -109,11 +93,5 @@ jobs:
       - name: Combine to universal dylib
         run: lipo -create -output native/target/darwin/release/libudpqueue.dylib native/target/**/release/*.dylib
 
-      - name: Build and Publish
-        env:
-          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
-          JRELEASER_MAVENCENTRAL_TOKEN: ${{ secrets.MAVENCENTRAL_TOKEN }}
-          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
-          JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
-          JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: ./gradlew native:publish native:jreleaserRelease -Ptarget=${{ matrix.target }} -x cargoBuild
+      - name: Run Gradle Build
+        run: ./gradlew build -x cargoBuild -Ptarget=darwin

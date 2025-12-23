@@ -33,7 +33,7 @@ MacOS/Darwin universal (x86 intel & aarch64 M1):
 
 [![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-darwin?color=blue&label=darwin&logo=apple&logoColor=white)](https://search.maven.org/artifact/club.minnced/udpqueue-native-darwin)
 
-More platforms can be added on request. Linux shared libraries are compiled against **GLIBC 2.18**.
+More platforms can be added on request. Linux shared libraries are compiled against **GLIBC 2.27**.
 
 Simply install the version of `udpqueue-native-*` for your platform:
 

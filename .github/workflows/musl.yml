@@ -1,13 +1,7 @@
 name: musl
 
 on:
-  push:
-    branches: [ "master" ]
-    paths:
-      - '.github/workflows/musl.yml' # when new targets are added
-      - 'build.gradle.kts' # when the root build script changes
-      - 'api' # when api source is changed
-      - 'native' # when natives are changed
+  workflow_dispatch:
 
 concurrency:
   group: "pub-musl"

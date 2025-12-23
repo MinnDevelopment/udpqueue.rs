@@ -13,8 +13,16 @@ dependencies {
     api(project(":api"))
 }
 
+val cargoBuild by tasks.registering(Exec::class) {
+    commandLine(
+        "cargo", "build", "--release", "--target", targetPlatform
+    )
+}
+
 val moveResources by tasks.registering(Copy::class) {
     group = "build"
+
+    dependsOn(cargoBuild)
 
     from("target/$targetPlatform/release/")
 

@@ -1,13 +1,13 @@
 [package]
 name = "udpqueue"
 version = "0.2.7"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-jni = "0.19"
+jni = "0.21"
 
 [lib]
-crate_type = ["cdylib"]
+crate-type = ["cdylib"]
 
 [profile.release]
 opt-level = 3

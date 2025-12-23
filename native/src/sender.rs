@@ -179,7 +179,7 @@ impl Manager {
     }
 
     #[inline(always)]
-    fn state(&self) -> MutexGuard<QueueState> {
+    fn state<'a>(&'a self) -> MutexGuard<'a, QueueState> {
         self.state.lock().unwrap()
     }
 

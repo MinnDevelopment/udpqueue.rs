@@ -1,6 +1,7 @@
-use jni::objects::{JClass, JString, JValue};
-use jni::sys::{jboolean, jint, jlong, jobject};
+use core::slice;
 use jni::JNIEnv;
+use jni::objects::{JByteBuffer, JClass, JObject, JString, JValueOwned};
+use jni::sys::{jboolean, jint, jlong};
 use sender::{Manager, Sockets};
 use std::net::{SocketAddr, UdpSocket};
 use std::time::Duration;
@@ -13,38 +14,47 @@ fn get_handle(instance: jlong) -> &'static Manager {
 }
 
 #[inline(always)]
-fn parse_address(
-    env: &JNIEnv,
-    string: JString,
+fn parse_address<'local>(
+    env: &mut JNIEnv<'local>,
+    string: JString<'local>,
     port: jint,
 ) -> Result<SocketAddr, Box<dyn std::error::Error>> {
     Ok(SocketAddr::new(
-        env.get_string(string)?.to_str()?.parse()?,
+        env.get_string(&string)?.to_str()?.parse()?,
         port as u16,
     ))
 }
 
 #[inline(always)]
-fn copy_data(env: &JNIEnv, buffer: jobject, length: jint) -> Result<Box<[u8]>, jni::errors::Error> {
+fn copy_data<'local>(
+    env: &JNIEnv<'local>,
+    buffer: JObject<'local>,
+    length: jint,
+) -> Result<Box<[u8]>, jni::errors::Error> {
     let length = length as usize;
-    let slice = env.get_direct_buffer_address(buffer.into())?;
-    Ok(Box::from(&slice[..length]))
+    let slice = unsafe {
+        slice::from_raw_parts_mut(
+            env.get_direct_buffer_address(&JByteBuffer::from(buffer))?,
+            length,
+        )
+    };
+    Ok(Box::from(slice))
 }
 
 /// Wrapper for System.getProperty(String): String?
 #[inline]
-fn get_property(env: &JNIEnv, name: &str) -> Option<String> {
+fn get_property(env: &mut JNIEnv, name: &str) -> Option<String> {
     let class = env.find_class("java/lang/System").ok()?;
-    let args = JValue::Object(env.new_string(name).ok()?.into());
+    let args = JValueOwned::Object(env.new_string(name).ok()?.into());
 
     match env.call_static_method(
         class,
         "getProperty",
         "(Ljava/lang/String;)Ljava/lang/String;",
-        &[args],
+        &[args.borrow()],
     ) {
-        Ok(JValue::Object(obj)) => Some(
-            env.get_string(JString::from(obj))
+        Ok(JValueOwned::Object(obj)) => Some(
+            env.get_string(&JString::from(obj))
                 .ok()?
                 .to_str()
                 .ok()?
@@ -57,17 +67,19 @@ fn get_property(env: &JNIEnv, name: &str) -> Option<String> {
 /// Whether to log send errors, default true
 /// Configured using -Dudpqueue.log_errors=<bool>
 #[inline]
-fn is_log_errors(env: &JNIEnv) -> bool {
+fn is_log_errors(env: &mut JNIEnv) -> bool {
     get_property(env, "udpqueue.log_errors")
         .map(|s| s == "true")
         .unwrap_or(true)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(non_snake_case, unused)]
-pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_create(
-    env: JNIEnv,
-    me: jobject,
+pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_create<
+    'local,
+>(
+    mut env: JNIEnv<'local>,
+    me: JObject<'local>,
     queue_buffer_capacity: jint,
     packet_interval: jlong,
 ) -> jlong {
@@ -79,11 +91,13 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(non_snake_case, unused)]
-pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_destroy(
-    env: JNIEnv,
-    me: jobject,
+pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_destroy<
+    'local,
+>(
+    mut env: JNIEnv<'local>,
+    me: JObject<'local>,
     instance: jlong,
 ) {
     if instance == 0 {
@@ -101,11 +115,13 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(non_snake_case, unused)]
-pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_getRemainingCapacity(
-    env: JNIEnv,
-    me: jobject,
+pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_getRemainingCapacity<
+    'local,
+>(
+    mut env: JNIEnv<'local>,
+    me: JObject<'local>,
     instance: jlong,
     key: jlong,
 ) -> jint {
@@ -117,14 +133,14 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
 }
 
 #[allow(unused, clippy::too_many_arguments)]
-fn queue_packet(
-    env: JNIEnv,
-    me: jobject,
+fn queue_packet<'local>(
+    mut env: JNIEnv<'local>,
+    me: JObject<'local>,
     instance: jlong,
     key: jlong,
-    address_string: JString,
+    address_string: JString<'local>,
     port: jint,
-    data_buffer: jobject,
+    data_buffer: JObject<'local>,
     data_length: jint,
     socket: Option<UdpSocket>,
 ) -> bool {
@@ -140,7 +156,7 @@ fn queue_packet(
         }
     };
 
-    let address = match parse_address(&env, address_string, port) {
+    let address = match parse_address(&mut env, address_string, port) {
         Ok(a) => a,
         Err(e) => {
             eprintln!("Invalid socket address provided: {e}");
@@ -151,16 +167,18 @@ fn queue_packet(
     get_handle(instance).enqueue_packet(key, address, data, socket)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(non_snake_case, unused)]
-pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_queuePacket(
-    env: JNIEnv,
-    me: jobject,
+pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_queuePacket<
+    'local,
+>(
+    mut env: JNIEnv<'local>,
+    me: JObject<'local>,
     instance: jlong,
     key: jlong,
-    address_string: JString,
+    address_string: JString<'local>,
     port: jint,
-    data_buffer: jobject,
+    data_buffer: JObject<'local>,
     data_length: jint,
 ) -> jboolean {
     queue_packet(
@@ -176,11 +194,13 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     ) as jboolean
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(non_snake_case, unused)]
-pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_deleteQueue(
-    env: JNIEnv,
-    me: jobject,
+pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_deleteQueue<
+    'local,
+>(
+    mut env: JNIEnv<'local>,
+    me: JObject<'local>,
     instance: jlong,
     key: jlong,
 ) -> jboolean {
@@ -191,24 +211,28 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     get_handle(instance).delete_queue(key) as jboolean
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(non_snake_case, unused)]
-pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_process(
-    env: JNIEnv,
-    me: jobject,
+pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_process<
+    'local,
+>(
+    mut env: JNIEnv<'local>,
+    me: JObject<'local>,
     instance: jlong,
 ) {
-    let log_errors = is_log_errors(&env);
+    let log_errors = is_log_errors(&mut env);
     if instance != 0 {
         get_handle(instance).process(log_errors);
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(non_snake_case, unused)]
-pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_pauseDemo(
-    env: JNIEnv,
-    me: JClass,
+pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_pauseDemo<
+    'local,
+>(
+    mut env: JNIEnv<'local>,
+    me: JClass<'local>,
     length: jint,
 ) {
     // todo!();
@@ -217,11 +241,13 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
 // Explicit socket handling requires platform-specific conversions between file descriptors / handles to UdpSocket instances.
 // Note: I haven't tested any of this since I have no usable java interface at the moment.
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(non_snake_case, unused)]
-pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_processWithSocket(
-    env: JNIEnv,
-    me: jobject,
+pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_processWithSocket<
+    'local,
+>(
+    mut env: JNIEnv<'local>,
+    me: JObject<'local>,
     instance: jlong,
     socketv4: jlong,
     socketv6: jlong,
@@ -245,7 +271,7 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
 
     let sockets = Sockets { v4, v6 };
 
-    let log_errors = is_log_errors(&env);
+    let log_errors = is_log_errors(&mut env);
     get_handle(instance).process_with_sockets(log_errors, &sockets);
 
     // This gives up ownership of the file descriptors back to the caller, allowing them to stay open
@@ -257,16 +283,18 @@ pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_Ud
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(non_snake_case, unused)]
-pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_queuePacketWithSocket(
-    env: JNIEnv,
-    me: jobject,
+pub extern "system" fn Java_com_sedmelluq_discord_lavaplayer_udpqueue_natives_UdpQueueManagerLibrary_queuePacketWithSocket<
+    'local,
+>(
+    mut env: JNIEnv<'local>,
+    me: JObject<'local>,
     instance: jlong,
     key: jlong,
-    address_string: JString,
+    address_string: JString<'local>,
     port: jint,
-    data_buffer: jobject,
+    data_buffer: JObject<'local>,
     data_length: jint,
     socket_handle: jlong,
 ) -> jboolean {
@@ -319,7 +347,7 @@ mod unix_specific {
 
     #[inline(always)]
     pub(crate) unsafe fn to_socket(handle: jlong) -> UdpSocket {
-        UdpSocket::from_raw_fd(handle as RawFd)
+        unsafe { UdpSocket::from_raw_fd(handle as RawFd) }
     }
 
     #[inline(always)]
@@ -335,7 +363,7 @@ mod windows_specific {
 
     #[inline(always)]
     pub(crate) unsafe fn to_socket(handle: jlong) -> UdpSocket {
-        UdpSocket::from_raw_socket(handle as RawSocket)
+        unsafe { UdpSocket::from_raw_socket(handle as RawSocket) }
     }
 
     #[inline(always)]

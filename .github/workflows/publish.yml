@@ -48,7 +48,7 @@ jobs:
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: ./gradlew native:publish native:jreleaserRelease -Ptarget=${{ matrix.target }}
+        run: ./gradlew native:publish native:jreleaserDeploy -Ptarget=${{ matrix.target }}
 
   linux-musl:
     strategy:
@@ -89,7 +89,7 @@ jobs:
           RUSTFLAGS: "-C target-feature=-crt-static -C link-args=-static-libgcc"
         run: |
           export PATH="/opt/musl/${{ matrix.arch }}-linux-musl-cross/bin:$PATH"
-          ./gradlew native:publish native:jreleaserRelease -Ptarget=${{ matrix.target }}
+          ./gradlew native:publish native:jreleaserDeploy -Ptarget=${{ matrix.target }}
 
   windows:
     strategy:
@@ -122,7 +122,7 @@ jobs:
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: ./gradlew native:publish native:jreleaserRelease -Ptarget=${{ matrix.target }}
+        run: ./gradlew native:publish native:jreleaserDeploy -Ptarget=${{ matrix.target }}
 
   macos:
     name: Build macOS universal binary
@@ -158,4 +158,4 @@ jobs:
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: ./gradlew native:publish native:jreleaserRelease -Ptarget=${{ matrix.target }} -x cargoBuild
+        run: ./gradlew native:publish native:jreleaserDeploy -Ptarget=${{ matrix.target }} -x cargoBuild

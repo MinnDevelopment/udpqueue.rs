@@ -30,6 +30,10 @@ Windows x86 (intel):
 [![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-win-x86-64?color=blue&label=win-x86-64&logo=windows&logoColor=white)](https://search.maven.org/artifact/club.minnced/udpqueue-native-win-x86-64)
 [![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-win-x86?color=blue&label=win-x86&logo=windows&logoColor=white)](https://search.maven.org/artifact/club.minnced/udpqueue-native-win-x86)
 
+Windows aarch64:
+
+[![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-win-aarch64?color=blue&label=win-aarch64&logo=windows&logoColor=white)](https://search.maven.org/artifact/club.minnced/udpqueue-native-win-aarch64)
+
 MacOS/Darwin universal (x86 intel & aarch64 M1):
 
 [![](https://img.shields.io/maven-central/v/club.minnced/udpqueue-native-darwin?color=blue&label=darwin&logo=apple&logoColor=white)](https://search.maven.org/artifact/club.minnced/udpqueue-native-darwin)
@@ -75,6 +79,7 @@ dependencies {
     implementation("club.minnced:udpqueue-native-linux-musl-aarch64:0.2.11")
     implementation("club.minnced:udpqueue-native-win-x86-64:0.2.11")
     implementation("club.minnced:udpqueue-native-win-x86:0.2.11")
+    implementation("club.minnced:udpqueue-native-win-aarch64:0.2.11")
     implementation("club.minnced:udpqueue-native-darwin:0.2.11")
 }
 ```

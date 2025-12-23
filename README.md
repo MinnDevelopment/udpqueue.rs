@@ -1,4 +1,5 @@
 [![publish-natives](https://github.com/MinnDevelopment/udpqueue.rs/actions/workflows/publish.yml/badge.svg)](https://github.com/MinnDevelopment/udpqueue.rs/actions/workflows/publish.yml)
+[![build](https://github.com/MinnDevelopment/udpqueue.rs/actions/workflows/build.yml/badge.svg)](https://github.com/MinnDevelopment/udpqueue.rs/actions/workflows/build.yml)
 [![rust-clippy analyze](https://github.com/MinnDevelopment/udpqueue.rs/actions/workflows/rust-clippy.yml/badge.svg)](https://github.com/MinnDevelopment/udpqueue.rs/actions/workflows/rust-clippy.yml)
 
 # udpqueue.rs
@@ -44,14 +45,19 @@ repositories {
 
 dependencies {
     // Fully modular, choose which platforms to use!
-    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.9") // adds linux 64bit
-    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.9") // adds windows 64bit
+    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.10") // adds linux 64bit
+    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.10") // adds windows 64bit
 }
 ```
 
 Alternatively, you can also install rustup locally on your target platform and build it yourself.
 
-Use `./install.sh <triplet>` to install the jar for your specific platform in maven local. Example: `./install.sh x86_64-unknown-linux-gnu`
+Example:
+
+```
+rustup target add x86_64-unknown-linux-gnu
+./gradlew publishToMavenLocal -Ptarget=x86_64-unknown-linux-gnu
+```
 
 To add all supported platforms, you can use this:
 
@@ -61,14 +67,14 @@ repositories {
 }
 
 dependencies {
-    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.9")
-    implementation("club.minnced:udpqueue-native-linux-x86:0.2.9")
-    implementation("club.minnced:udpqueue-native-linux-aarch64:0.2.9")
-    implementation("club.minnced:udpqueue-native-linux-arm:0.2.9")
-    implementation("club.minnced:udpqueue-native-linux-musl-x86-64:0.2.9")
-    implementation("club.minnced:udpqueue-native-linux-musl-aarch64:0.2.9")
-    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.9")
-    implementation("club.minnced:udpqueue-native-win-x86:0.2.9")
-    implementation("club.minnced:udpqueue-native-darwin:0.2.9")
+    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.10")
+    implementation("club.minnced:udpqueue-native-linux-x86:0.2.10")
+    implementation("club.minnced:udpqueue-native-linux-aarch64:0.2.10")
+    implementation("club.minnced:udpqueue-native-linux-arm:0.2.10")
+    implementation("club.minnced:udpqueue-native-linux-musl-x86-64:0.2.10")
+    implementation("club.minnced:udpqueue-native-linux-musl-aarch64:0.2.10")
+    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.10")
+    implementation("club.minnced:udpqueue-native-win-x86:0.2.10")
+    implementation("club.minnced:udpqueue-native-darwin:0.2.10")
 }
 ```

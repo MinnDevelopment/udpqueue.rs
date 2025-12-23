@@ -29,7 +29,7 @@ jobs:
 
     name: Publish ${{ matrix.target }}
     environment: MavenRelease
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     container:
       image: ubuntu:16.04
     steps:
@@ -78,13 +78,11 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af #@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          override: true
           target: ${{ matrix.target }}
       - name: Compile natives
         working-directory: native

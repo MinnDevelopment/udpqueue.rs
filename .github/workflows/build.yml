@@ -41,6 +41,42 @@ jobs:
       - name: Run Gradle Build
         run: ./gradlew build -Ptarget=${{ matrix.target }}
 
+  linux-musl:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            arch: x86_64
+          - target: aarch64-unknown-linux-musl
+            arch: aarch64
+
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    container:
+      image: clux/muslrust:stable
+    steps:
+      - name: Checkout sources
+        uses: taiki-e/checkout-action@v1
+      - name: Install Essentials
+        run: |
+          apt-get update -y
+          apt-get upgrade -y
+          apt-get install -y gcc musl-tools curl openjdk-17-jdk-headless
+      - name: Install Rust toolchain
+        run: |
+          rustup target add x86_64-unknown-linux-musl ${{ matrix.target }}
+      - name: Install linker dependencies
+        run: |
+          mkdir -p /opt/musl
+          curl -L https://github.com/MinnDevelopment/musl-cross-mirror/releases/download/v0.0.1/${{ matrix.arch }}-linux-musl-cross.tgz | tar xz -C /opt/musl
+      - name: Run Gradle Build
+        env:
+          RUSTFLAGS: "-C target-feature=-crt-static -C link-args=-static-libgcc"
+        run: |
+          export PATH="/opt/musl/${{ matrix.arch }}-linux-musl-cross/bin:$PATH"
+          which ${{ matrix.arch }}-linux-musl-gcc
+          ./gradlew build -Ptarget=${{ matrix.target }}
+
   windows:
     strategy:
       matrix:

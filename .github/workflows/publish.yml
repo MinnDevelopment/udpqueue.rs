@@ -91,6 +91,7 @@ jobs:
           export PATH="/opt/musl/${{ matrix.arch }}-linux-musl-cross/bin:$PATH"
           ./gradlew native:publish native:jreleaserDeploy -Ptarget=${{ matrix.target }}
 
+
   windows:
     strategy:
       matrix:
@@ -123,6 +124,33 @@ jobs:
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: ./gradlew native:publish native:jreleaserDeploy -Ptarget=${{ matrix.target }}
+
+  windows-aarch64:
+    name: Publish aarch64-pc-windows-msvc
+    environment: MavenRelease
+    runs-on: windows-11-arm
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: aarch64-pc-windows-msvc
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'microsoft'
+          java-version: '17'
+          cache: 'gradle'
+      - name: Build and Publish
+        env:
+          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
+          JRELEASER_MAVENCENTRAL_TOKEN: ${{ secrets.MAVENCENTRAL_TOKEN }}
+          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: ./gradlew native:publish native:jreleaserDeploy -Ptarget=aarch64-pc-windows-msvc
 
   macos:
     name: Build macOS universal binary

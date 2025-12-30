@@ -49,8 +49,8 @@ repositories {
 
 dependencies {
     // Fully modular, choose which platforms to use!
-    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.11") // adds linux 64bit
-    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.11") // adds windows 64bit
+    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.12") // adds linux 64bit
+    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.12") // adds windows 64bit
 }
 ```
 
@@ -71,15 +71,15 @@ repositories {
 }
 
 dependencies {
-    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.11")
-    implementation("club.minnced:udpqueue-native-linux-x86:0.2.11")
-    implementation("club.minnced:udpqueue-native-linux-aarch64:0.2.11")
-    implementation("club.minnced:udpqueue-native-linux-arm:0.2.11")
-    implementation("club.minnced:udpqueue-native-linux-musl-x86-64:0.2.11")
-    implementation("club.minnced:udpqueue-native-linux-musl-aarch64:0.2.11")
-    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.11")
-    implementation("club.minnced:udpqueue-native-win-x86:0.2.11")
-    implementation("club.minnced:udpqueue-native-win-aarch64:0.2.11")
-    implementation("club.minnced:udpqueue-native-darwin:0.2.11")
+    implementation("club.minnced:udpqueue-native-linux-x86-64:0.2.12")
+    implementation("club.minnced:udpqueue-native-linux-x86:0.2.12")
+    implementation("club.minnced:udpqueue-native-linux-aarch64:0.2.12")
+    implementation("club.minnced:udpqueue-native-linux-arm:0.2.12")
+    implementation("club.minnced:udpqueue-native-linux-musl-x86-64:0.2.12")
+    implementation("club.minnced:udpqueue-native-linux-musl-aarch64:0.2.12")
+    implementation("club.minnced:udpqueue-native-win-x86-64:0.2.12")
+    implementation("club.minnced:udpqueue-native-win-x86:0.2.12")
+    implementation("club.minnced:udpqueue-native-win-aarch64:0.2.12")
+    implementation("club.minnced:udpqueue-native-darwin:0.2.12")
 }
 ```

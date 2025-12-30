@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.11 - 2025/12/30
+
+- Avoid copying buffers when they are already direct
+
 ## v0.2.11 - 2025/12/23
 
 - Add support for windows aarch64

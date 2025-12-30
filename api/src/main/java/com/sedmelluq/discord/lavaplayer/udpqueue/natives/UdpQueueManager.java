@@ -66,12 +66,18 @@ public class UdpQueueManager extends NativeResourceHolder {
       }
 
       int length = packet.remaining();
-      packetBuffer.clear();
-      packetBuffer.put(packet);
+      ByteBuffer directBuffer;
+      if (packet.isDirect()) {
+          directBuffer = packet;
+      } else {
+          packetBuffer.clear();
+          packetBuffer.put(packet);
+          directBuffer = packetBuffer;
+      }
 
       int port = address.getPort();
       String hostAddress = address.getAddress().getHostAddress();
-      return library.queuePacket(instance, key, hostAddress, port, packetBuffer, length);
+      return library.queuePacket(instance, key, hostAddress, port, directBuffer, length);
     }
   }
 
